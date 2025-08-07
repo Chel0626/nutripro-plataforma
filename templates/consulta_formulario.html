@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg">
+                <div class="card-header {% if edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+                    <h3 class="mb-0"><i class="fas {% if edit_mode %}fa-calendar-check{% else %}fa-calendar-plus{% endif %} me-2"></i>{{ titulo }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.paciente_id.label(class="form-label fw-bold") }}
+                            {% if edit_mode or not paciente_id %} {{ form.paciente_id(class="form-select form-select-lg" + (" is-invalid" if form.paciente_id.errors else "")) }}
+                            {% else %}
+                                <input type="text" class="form-control form-control-lg" value="{{ form.paciente_id.choices | selectattr(0, 'equalto', paciente_id) | map(attribute=1) | first }}" disabled>
+                                {# Para garantir que o valor do paciente seja enviado corretamente quando o campo está desabilitado para o usuário,
+                                   garanta que form.paciente_id.data já foi setado na rota ANTES de renderizar.
+                                   Se o campo SelectField não for renderizado (como com d-none), seu valor não será submetido.
+                                   Uma alternativa é ter um campo hidden com o paciente_id se o SelectField não for usado.
+                                   No entanto, a lógica atual na rota `nova_consulta` já define `form.paciente_id.data = pid`,
+                                   então mesmo que o select não seja interativo, o valor deve ser mantido pelo WTForms.
+                                #}
+                                {% if form.paciente_id.data %}
+                                     <input type="hidden" name="paciente_id" value="{{ form.paciente_id.data }}">
+                                {% endif %}
+                            {% endif %}
+                            {% if form.paciente_id.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.paciente_id.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.data_hora.label(class="form-label fw-bold") }}
+                            {{ form.data_hora(class="form-control form-control-lg" + (" is-invalid" if form.data_hora.errors else "")) }}
+                            {% if form.data_hora.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.data_hora.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.tipo_consulta.label(class="form-label fw-bold") }}
+                                {{ form.tipo_consulta(class="form-control form-control-lg" + (" is-invalid" if form.tipo_consulta.errors else ""), placeholder="Ex: Avaliação Inicial") }}
+                                {% if form.tipo_consulta.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.tipo_consulta.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.status.label(class="form-label fw-bold") }}
+                                {{ form.status(class="form-select form-select-lg" + (" is-invalid" if form.status.errors else "")) }}
+                                {% if form.status.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.status.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.link_videochamada.label(class="form-label fw-bold") }}
+                            {{ form.link_videochamada(class="form-control form-control-lg" + (" is-invalid" if form.link_videochamada.errors else ""), placeholder="https://") }}
+                            {% if form.link_videochamada.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.link_videochamada.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.observacoes_nutri.label(class="form-label fw-bold") }}
+                            {{ form.observacoes_nutri(class="form-control form-control-lg" + (" is-invalid" if form.observacoes_nutri.errors else ""), rows="4", placeholder="Anotações sobre a consulta...") }}
+                            {% if form.observacoes_nutri.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.observacoes_nutri.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            {% set redirect_url = url_for('detalhe_paciente', paciente_id=paciente_id) if paciente_id else url_for('listar_consultas') %}
+                            {% if edit_mode and consulta_id %}
+                                {# Se edit_mode e consulta_id existem, o cancel volta para detalhe_consulta OU detalhe_paciente se paciente_id existir #}
+                                {% set redirect_url = url_for('detalhe_consulta', consulta_id=consulta_id) %}
+                            {% elif paciente_id %}
+                                {% set redirect_url = url_for('detalhe_paciente', paciente_id=paciente_id) %}
+                            {% else %}
+                                {% set redirect_url = url_for('listar_consultas') %}
+                            {% endif %}
+
+                            <a href="{{ redirect_url }}" class="btn btn-outline-secondary btn-lg me-md-2 mb-2 mb-md-0">Cancelar</a>
+                            {% if edit_mode %}
+                                {{ form.submit(class="btn btn-warning btn-lg", value="Salvar Alterações") }}
+                            {% else %}
+                                {{ form.submit(class="btn btn-primary btn-lg", value="Agendar Consulta") }}
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

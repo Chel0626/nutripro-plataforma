@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ plano.nome_plano }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11pt;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* --- INÍCIO DA SEÇÃO DO LOGO --- */
+        #watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1000; /* Coloca a imagem atrás de todo o conteúdo */
+            opacity: 0.1;   /* Deixa a imagem bem clara, como uma marca d'água */
+            width: 70%;
+        }
+        /* --- FIM DA SEÇÃO DO LOGO --- */
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        .header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 18pt;
+        }
+        .header p {
+            margin: 5px 0 0;
+            font-size: 12pt;
+            color: #555;
+        }
+
+        .patient-info {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .meal-group {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        .meal-group h3 {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 0;
+            font-size: 14pt;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: -1cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <img id="watermark" src="{{ url_for('static', filename='img/logo.jpg', _external=True) }}">
+
+    <div class="footer">
+        Prescrição gerada pela Plataforma NutriPro em {{ data_hoje }}
+    </div>
+
+    <div class="header">
+        <h2>Dra. Carolina de Souza Silva</h2>
+        <p>Nutricionista - CRN 29.096</p>
+    </div>
+
+    <div class="patient-info">
+        <strong>Paciente:</strong> {{ paciente.nome_completo }}<br>
+        <strong>Data do Plano:</strong> {{ plano.data_criacao.strftime('%d/%m/%Y') }}<br>
+        <strong>Objetivo Calórico:</strong> ~{{ plano.objetivo_calorico_final }} kcal
+    </div>
+
+    {% for refeicao in plano.refeicoes %}
+    <div class="meal-group">
+        <h3>{{ refeicao.nome_refeicao }}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Alimento</th>
+                    <th style="width: 25%;">Medida Caseira</th>
+                    <th style="width: 45%;">Opções de Substituição</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in refeicao.itens %}
+                <tr>
+                    <td><strong>{{ item.nome_alimento }}</strong> ({{ item.quantidade_g|round|int }}g)</td>
+                    <td>{{ item.medida_caseira or '---' }}</td>
+                    <td>{{ item.substituicoes|replace('\n', '<br>')|safe or '---' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+</body>
+</html>

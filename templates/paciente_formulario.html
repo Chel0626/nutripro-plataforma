@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg">
+                <div class="card-header {% if edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+                    <h3 class="mb-0"><i class="fas {% if edit_mode %}fa-user-edit{% else %}fa-user-plus{% endif %} me-2"></i>{{ titulo }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.nome_completo.label(class="form-label fw-bold") }}
+                            {{ form.nome_completo(class="form-control form-control-lg" + (" is-invalid" if form.nome_completo.errors else ""), placeholder="Nome completo do paciente") }}
+                            {% if form.nome_completo.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.nome_completo.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label fw-bold") }}
+                            {{ form.email(class="form-control form-control-lg" + (" is-invalid" if form.email.errors else ""), placeholder="email@exemplo.com") }}
+                             {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.telefone.label(class="form-label fw-bold") }}
+                                {{ form.telefone(class="form-control form-control-lg" + (" is-invalid" if form.telefone.errors else ""), placeholder="(XX) XXXXX-XXXX") }}
+                                {% if form.telefone.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.telefone.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.data_nascimento.label(class="form-label fw-bold") }}
+                                {{ form.data_nascimento(class="form-control form-control-lg" + (" is-invalid" if form.data_nascimento.errors else ""), type="date") }}
+                                 {% if form.data_nascimento.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.data_nascimento.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.observacoes.label(class="form-label fw-bold") }}
+                            {{ form.observacoes(class="form-control form-control-lg" + (" is-invalid" if form.observacoes.errors else ""), rows="4", placeholder="Alergias, preferências, histórico médico relevante...") }}
+                            {% if form.observacoes.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.observacoes.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            {% if edit_mode %}
+                                <a href="{{ url_for('detalhe_paciente', paciente_id=paciente_id) }}" class="btn btn-outline-secondary btn-lg me-md-2 mb-2 mb-md-0">Cancelar</a>
+                                {{ form.submit(class="btn btn-warning btn-lg", value="Salvar Alterações") }}
+                            {% else %}
+                                <a href="{{ url_for('listar_pacientes') }}" class="btn btn-outline-secondary btn-lg me-md-2 mb-2 mb-md-0">Cancelar</a>
+                                {{ form.submit(class="btn btn-primary btn-lg", value="Cadastrar Paciente") }}
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

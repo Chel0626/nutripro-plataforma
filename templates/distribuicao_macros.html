@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{{ titulo }}</h1>
+
+    <form method="POST" class="card card-body mb-4">
+        {{ form.csrf_token }}
+        <h5 class="card-title">1. Configuração Inicial</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="total_kcal" class="form-label">{{ form.total_kcal.label }}</label>
+                    {{ form.total_kcal(class="form-control", id="total_kcal") }}
+                </div>
+                <div class="mb-3">
+                    <label for="peso" class="form-label">{{ form.peso.label }}</label>
+                    {{ form.peso(class="form-control", id="peso") }}
+                </div>
+                <div class="row">
+                    <div class="col-sm-4">
+                        <label for="perc_carb" class="form-label">{{ form.perc_carb.label }}</label>
+                        {{ form.perc_carb(class="form-control", id="perc_carb") }}
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="perc_prot" class="form-label">{{ form.perc_prot.label }}</label>
+                        {{ form.perc_prot(class="form-control", id="perc_prot") }}
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="perc_gord" class="form-label">{{ form.perc_gord.label }}</label>
+                        {{ form.perc_gord(class="form-control", id="perc_gord") }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="num_refeicoes_grandes" class="form-label">{{ form.num_refeicoes_grandes.label }}</label>
+                    {{ form.num_refeicoes_grandes(class="form-control", id="num_refeicoes_grandes") }}
+                </div>
+                <div class="mb-3">
+                    <label for="num_refeicoes_pequenas" class="form-label">{{ form.num_refeicoes_pequenas.label }}</label>
+                    {{ form.num_refeicoes_pequenas(class="form-control", id="num_refeicoes_pequenas") }}
+                </div>
+                <div class="mb-3">
+                    <label for="perc_dist_grandes" class="form-label">{{ form.perc_dist_grandes.label }}</label>
+                    {{ form.perc_dist_grandes(class="form-control", id="perc_dist_grandes") }}
+                </div>
+            </div>
+        </div>
+        <div class="mt-3">
+            <button type="submit" name="action" value="calcular" class="btn btn-primary">Calcular Distribuição Inicial</button>
+        </div>
+    </form>
+
+    {% if resultado %}
+    <div class="card card-body">
+        <h5 class="card-title">2. Resultados e Ajuste Manual</h5>
+
+        <h6>Totais Diários:</h6>
+        <p class="mb-1">
+            Proteína:
+            <strong id="total-prot-gramas">{{ resultado.total_macros.proteina }}</strong> g
+            (<strong id="total-prot-gkg">{{ resultado.total_macros.gkg_prot }}</strong> g/kg)
+        </p>
+        <p class="mb-1">
+            Carboidrato:
+            <strong id="total-carb-gramas">{{ resultado.total_macros.carboidrato }}</strong> g
+            (<strong id="total-carb-gkg">{{ resultado.total_macros.gkg_carb }}</strong> g/kg)
+        </p>
+        <p class="mb-1">
+            Gordura:
+            <strong id="total-gord-gramas">{{ resultado.total_macros.gordura }}</strong> g
+            (<strong id="total-gord-gkg">{{ resultado.total_macros.gkg_gord }}</strong> g/kg)
+        </p>
+        <p class="mt-2">
+            <strong>Total Calórico Ajustado:
+                <span id="total-kcal-ajustado">{{ (resultado.total_macros.proteina * 4) + (resultado.total_macros.carboidrato * 4) + (resultado.total_macros.gordura * 9) }}</span> kcal
+            </strong>
+        </p>
+        <hr>
+
+        <div class="mt-3">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="toggle-redistribuicao" checked>
+                <label class="form-check-label" for="toggle-redistribuicao">Ativar redistribuição automática</label>
+            </div>
+
+            <table class="table table-sm text-center">
+                <thead>
+                    <tr>
+                        <th class="text-start">Refeição</th>
+                        <th>Carboidrato (g)</th>
+                        <th>Proteína (g)</th>
+                        <th>Gordura (g)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if form.refeicoes_grandes_ajustadas.entries %}
+                    <tr>
+                        <td colspan="4" class="text-start fw-bold pt-3">Refeições Grandes</td>
+                    </tr>
+                    {% for refeicao_grande in form.refeicoes_grandes_ajustadas %}
+                    <tr>
+                        <td class="text-start">Grande {{ loop.index }}</td>
+                        <td>{{ refeicao_grande.carboidrato(class="form-control form-control-sm text-center macro-input", id=refeicao_grande.carboidrato.id, **{'data-meal-type': 'grande', 'data-macro-type': 'carboidrato'}) }}</td>
+                        <td>{{ refeicao_grande.proteina(class="form-control form-control-sm text-center macro-input", id=refeicao_grande.proteina.id, **{'data-meal-type': 'grande', 'data-macro-type': 'proteina'}) }}</td>
+                        <td>{{ refeicao_grande.gordura(class="form-control form-control-sm text-center macro-input", id=refeicao_grande.gordura.id, **{'data-meal-type': 'grande', 'data-macro-type': 'gordura'}) }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if form.refeicoes_pequenas_ajustadas.entries %}
+                     <tr>
+                        <td colspan="4" class="text-start fw-bold pt-3">Refeições Pequenas</td>
+                    </tr>
+                    {% for refeicao_pequena in form.refeicoes_pequenas_ajustadas %}
+                    <tr>
+                        <td class="text-start">Pequena {{ loop.index }}</td>
+                        <td>{{ refeicao_pequena.carboidrato(class="form-control form-control-sm text-center macro-input", id=refeicao_pequena.carboidrato.id, **{'data-meal-type': 'pequena', 'data-macro-type': 'carboidrato'}) }}</td>
+                        <td>{{ refeicao_pequena.proteina(class="form-control form-control-sm text-center macro-input", id=refeicao_pequena.proteina.id, **{'data-meal-type': 'pequena', 'data-macro-type': 'proteina'}) }}</td>
+                        <td>{{ refeicao_pequena.gordura(class="form-control form-control-sm text-center macro-input", id=refeicao_pequena.gordura.id, **{'data-meal-type': 'pequena', 'data-macro-type': 'gordura'}) }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/distribuicao_macros.js') }}"></script>
+{% endblock %}

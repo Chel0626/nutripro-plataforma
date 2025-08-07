@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="bg-light p-5 rounded-3 shadow-sm">
+        <h1 class="display-5 fw-bold"><i class="fas fa-info-circle me-2"></i>{{ titulo }}</h1>
+        <p class="lead">
+            Bem-vindo à NutriPlatform, sua aliada digital na jornada por uma vida mais saudável e equilibrada.
+        </p>
+        <hr class="my-4">
+        <p>
+            Esta plataforma foi desenvolvida com o objetivo de facilitar a interação entre nutricionistas e pacientes,
+            oferecendo ferramentas para gerenciamento de cadastros, agendamentos (em breve), planos alimentares personalizados (em breve)
+            e muito mais.
+        </p>
+        <p>
+            Nossa missão é empoderar profissionais da nutrição com tecnologia intuitiva e eficiente, permitindo que
+            dediquem mais tempo ao que realmente importa: o cuidado e a atenção individualizada a cada paciente.
+        </p>
+        <p>
+            Agradecemos por escolher a NutriPlatform!
+        </p>
+        <a class="btn btn-primary btn-lg mt-3" href="{{ url_for('home') }}" role="button"><i class="fas fa-home me-2"></i>Voltar ao Dashboard</a>
+    </div>
+</div>
+{% endblock %}

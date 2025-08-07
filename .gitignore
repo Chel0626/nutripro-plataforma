@@ -1,0 +1,19 @@
+# Ambiente Virtual
+venv/
+.venv/
+
+# Arquivos de Cache do Python
+__pycache__/
+*.pyc
+
+# Banco de Dados
+# Vamos ignorar o banco de dados para que cada desenvolvedor
+# tenha o seu próprio e não sobreescrever o de outros.
+# Opcional: Se quiser fazer backup do schema, mas não dos dados.
+plataforma_nutri.db
+
+# Arquivos do sistema
+.DS_Store
+
+# Arquivos do VS Code
+.vscode/
