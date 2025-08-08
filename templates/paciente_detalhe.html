@@ -1,165 +1,44 @@
 {% extends "base.html" %}
-{% from "_form_helpers.html" import render_field %}
-
-{% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
-<div class="container mt-2">
-    {# Card de Detalhes do Paciente #}
-    <div class="card shadow-lg mb-4">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0"><i class="fas fa-user-circle me-2"></i>Detalhes de: {{ paciente.nome_completo }}</h3>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-0">{{ paciente.nome_completo }}</h1>
+            <small class="text-muted">{{ paciente.email }} | {{ paciente.telefone }}</small>
         </div>
-        <div class="card-body p-4">
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <p class="mb-1"><strong><i class="fas fa-envelope me-2 text-primary"></i>Email:</strong></p>
-                    <p>{{ paciente.email }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p class="mb-1"><strong><i class="fas fa-phone me-2 text-primary"></i>Telefone:</strong></p>
-                    <p>{{ paciente.telefone if paciente.telefone else 'Não informado' }}</p>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <p class="mb-1"><strong><i class="fas fa-calendar-alt me-2 text-primary"></i>Data de Nascimento:</strong></p>
-                    <p>{{ paciente.data_nascimento.strftime('%d/%m/%Y') if paciente.data_nascimento else 'Não informada' }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p class="mb-1"><strong><i class="fas fa-calendar-plus me-2 text-primary"></i>Data de Cadastro:</strong></p>
-                    <p>{{ paciente.data_cadastro.strftime('%d/%m/%Y às %H:%M') }}</p>
-                </div>
-            </div>
-            <hr>
-            <h5 class="mt-3"><i class="fas fa-notes-medical me-2 text-primary"></i>Observações do Paciente:</h5>
-            <div class="bg-light p-3 rounded border" style="min-height: 100px; white-space: pre-wrap;">
-                {{ paciente.observacoes if paciente.observacoes else 'Nenhuma observação cadastrada.' }}
-            </div>
-        </div>
-        <div class="card-footer text-muted d-flex flex-column flex-md-row justify-content-between align-items-center">
-            <span class="mb-2 mb-md-0">ID do Paciente: {{ paciente.id }}</span>
-            <div>
-                <a href="{{ url_for('editar_paciente', paciente_id=paciente.id) }}" class="btn btn-warning btn-sm me-2 mb-1 mb-md-0"><i class="fas fa-edit me-1"></i>Editar Paciente</a>
-                <form action="{{ url_for('excluir_paciente', paciente_id=paciente.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir o paciente \'{{ paciente.nome_completo }}\'? Esta ação não pode ser desfeita e excluirá todas as suas consultas e perfis de diabetes associados.');">
-                    <button type="submit" class="btn btn-danger btn-sm me-2 mb-1 mb-md-0"><i class="fas fa-trash-alt me-1"></i>Excluir Paciente</button>
-                </form>
-                <a href="{{ url_for('listar_pacientes') }}" class="btn btn-secondary btn-sm mb-1 mb-md-0"><i class="fas fa-arrow-left me-1"></i>Voltar para Lista de Pacientes</a>
-            </div>
+        <div class="btn-group">
+            <a href="{{ url_for('editar_paciente', paciente_id=paciente.id) }}" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Editar Paciente</a>
+            <form action="{{ url_for('excluir_paciente', paciente_id=paciente.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este paciente e todos os seus dados?');" class="d-inline">
+                <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Excluir Paciente</button>
+            </form>
         </div>
     </div>
 
-    {# Card de Perfis de Diabetes #}
-    <div class="card shadow-lg mb-4">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Perfis de Diabetes de {{ paciente.nome_completo.split()[0] }}</h4>
-            <a href="{{ url_for('novo_perfil_diabetes', paciente_id=paciente.id) }}" class="btn btn-light btn-sm">
-                <i class="fas fa-plus-circle me-1"></i>Novo Perfil de Diabetes
-            </a>
-        </div>
-        <div class="card-body p-0">
-            {% if paciente.perfis_diabetes.all() %}
-            <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nome do Perfil</th>
-                            <th>Válido Desde</th>
-                            <th>DIA (h)</th>
-                            <th>Unidade Glic.</th>
-                            <th class="text-center">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for perfil_item in paciente.perfis_diabetes.order_by(PerfilDiabetes.data_inicio_validade.desc()).all() %}
-                        <tr>
-                            <td><strong>{{ perfil_item.nome_perfil }}</strong></td>
-                            <td>{{ perfil_item.data_inicio_validade.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td>{{ perfil_item.dia if perfil_item.dia is not none else '-' }}</td>
-                            <td>{{ perfil_item.unidade_glicemia if perfil_item.unidade_glicemia else '-' }}</td>
-                            <td class="text-center">
-                                <a href="#" class="btn btn-info btn-sm me-1 disabled" title="Ver Detalhes (em breve)"><i class="fas fa-eye"></i></a>
-                                <a href="{{ url_for('editar_perfil_diabetes', perfil_id=perfil_item.id) }}" class="btn btn-warning btn-sm me-1" title="Editar Perfil"><i class="fas fa-edit"></i></a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Planos Alimentares</h4>
+                    <a href="{{ url_for('novo_plano', paciente_id=paciente.id) }}" class="btn btn-success"><i class="bi bi-file-earmark-plus"></i> Novo Plano</a>
+                </div>
+                <div class="card-body">
+                    {% if planos %}
+                        <ul class="list-group list-group-flush">
+                            {% for plano in planos %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ plano.nome_plano }}</strong> - <small class="text-muted">Criado em: {{ plano.data_criacao.strftime('%d/%m/%Y') }}</small>
+                                    </div>
+                                    <a href="{{ url_for('gerar_plano_pdf', plano_id=plano.id) }}" class="btn btn-outline-secondary btn-sm" target="_blank"><i class="bi bi-file-pdf"></i> Gerar PDF</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">Nenhum plano alimentar cadastrado para este paciente.</p>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="p-3 text-center">
-                <p class="mb-0 text-muted">Nenhum perfil de diabetes cadastrado para este paciente.</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-<p><strong>Observações:</strong> {{ paciente.observacoes or 'Nenhuma' }}</p>
-</div>
-
-<div class="card card-body mb-4">
-    <h5 class="card-title">Plano Alimentar</h5>
-    <p>Crie e gerencie os planos alimentares para este paciente.</p>
-    <div class="d-flex">
-        <a href="{{ url_for('novo_plano', paciente_id=paciente.id) }}" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Criar Novo Plano
-        </a>
-        </div>
-</div>
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Histórico de Consultas</h4>
-
-    {# Card de Consultas do Paciente #}
-    <div class="card shadow-lg">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Consultas de {{ paciente.nome_completo.split()[0] }}</h4>
-            <a href="{{ url_for('nova_consulta', pid=paciente.id) }}" class="btn btn-light btn-sm"><i class="fas fa-plus-circle me-1"></i>Nova Consulta</a>
-        </div>
-        <div class="card-body p-0">
-            {% if paciente.consultas %}
-            <div class="table-responsive">
-                <table class="table table-hover table-striped mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Data e Hora</th>
-                            <th>Tipo</th>
-                            <th>Status</th>
-                            <th class="text-center">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for consulta in paciente.consultas|sort(attribute='data_hora', reverse=True) %}
-                        <tr>
-                            <td>{{ consulta.data_hora.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td>{{ consulta.tipo_consulta if consulta.tipo_consulta else '-' }}</td>
-                            <td>
-                                <span class="badge fs-inherit
-                                    {% if consulta.status == 'Agendada' %}bg-primary
-                                    {% elif consulta.status == 'Realizada' %}bg-success
-                                    {% elif consulta.status == 'Cancelada' %}bg-danger
-                                    {% elif consulta.status == 'Remarcada' %}bg-warning text-dark
-                                    {% elif consulta.status == 'Não Compareceu' %}bg-secondary
-                                    {% else %}bg-light text-dark{% endif %}">
-                                    {{ consulta.status }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <a href="{{ url_for('detalhe_consulta', consulta_id=consulta.id) }}" class="btn btn-info btn-sm me-1" title="Ver Detalhes"><i class="fas fa-eye"></i></a>
-                                <a href="{{ url_for('editar_consulta', consulta_id=consulta.id) }}" class="btn btn-warning btn-sm me-1" title="Editar Consulta"><i class="fas fa-edit"></i></a>
-                                <form action="{{ url_for('excluir_consulta', consulta_id=consulta.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta consulta de {{ consulta.data_hora.strftime('%d/%m/%Y') }}?');">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Excluir Consulta"><i class="fas fa-trash-alt"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="p-3 text-center">
-                <p class="mb-0 text-muted">Nenhuma consulta registrada para este paciente.</p>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
