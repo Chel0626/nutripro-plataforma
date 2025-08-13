@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ titulo }}</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Para assinar digitalmente o plano <strong>{{ plano.nome_plano }}</strong>, por favor, forneça seu certificado digital e a senha.</p>
+                    <p class="text-muted"><small><i class="bi bi-shield-lock"></i> Seu certificado e senha são usados apenas neste momento e não são armazenados no servidor.</small></p>
+                    <hr>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="certificado" class="form-label"><strong>1. Arquivo do Certificado (.p12 ou .pfx)</strong></label>
+                            <input class="form-control" type="file" id="certificado" name="certificado" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="senha_certificado" class="form-label"><strong>2. Senha do Certificado</strong></label>
+                            <input type="password" class="form-control" id="senha_certificado" name="senha_certificado" required>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-pen-fill"></i> Assinar e Baixar PDF</button>
+                            <a href="{{ url_for('detalhe_paciente', paciente_id=plano.paciente_id) }}" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

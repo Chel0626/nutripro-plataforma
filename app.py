@@ -1,17 +1,30 @@
-# app.py (Versão com Orientações Gerais)
-from flask import Response
-from weasyprint import HTML
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+# app.py (Versão final com pyhanko - io.BytesIO)
+import io # <--- Importação necessária
+import os
+import tempfile
+import traceback
+from datetime import datetime, timezone
+
+import requests
+from calculadoras import (calcular_necessidade_calorica,
+                          distribuir_macros_nas_refeicoes,
+                          calcular_macros_por_porcentagem, somar_macros_refeicoes)
+from flask import (Flask, Response, flash, jsonify, redirect, render_template,
+                   request, url_for)
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SubmitField, DateField, SelectField, FloatField, IntegerField, FormField, FieldList
+from weasyprint import HTML
+from wtforms import (DateField, FieldList, FloatField, FormField, IntegerField,
+                     SelectField, StringField, SubmitField, TextAreaField)
 from wtforms.fields import DateTimeLocalField
-from wtforms.validators import DataRequired, Email as EmailValidator, Optional, NumberRange
-from datetime import datetime, timezone
-import os
-import requests
-from calculadoras import calcular_necessidade_calorica, calcular_macros_por_porcentagem, distribuir_macros_nas_refeicoes, somar_macros_refeicoes
+from wtforms.validators import DataRequired, Email as EmailValidator, NumberRange, Optional
 
+# Imports da pyhanko
+from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+from pyhanko.sign.fields import SigFieldSpec, append_signature_field
+from pyhanko.sign.signers import PdfSignatureMetadata, SimpleSigner, sign_pdf
+
+# ... (o resto do seu código, modelos, forms, etc. permanece exatamente igual) ...
 app = Flask(__name__)
 
 # --- CONFIGURAÇÕES GERAIS DO APP ---
@@ -20,6 +33,18 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plataforma_nutri.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+# --- FUNÇÃO DE CACHE BUSTING ---
+@app.context_processor
+def utility_processor():
+    def cache_buster(filename):
+        try:
+            filepath = os.path.join(app.static_folder, filename)
+            if os.path.exists(filepath):
+                return int(os.path.getmtime(filepath))
+        except:
+            return 0
+    return dict(cache_buster=cache_buster)
 
 # --- MODELOS DO BANCO DE DADOS ---
 class Paciente(db.Model):
@@ -49,7 +74,6 @@ class PlanoAlimentar(db.Model):
     paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
     nome_plano = db.Column(db.String(150), nullable=False, default='Plano Padrão')
     objetivo_calorico_final = db.Column(db.Integer, nullable=True)
-    # MUDANÇA: Campo 'objetivos' removido e os dois novos campos adicionados
     orientacoes_diabetes = db.Column(db.Text, nullable=True)
     orientacoes_nutricao = db.Column(db.Text, nullable=True)
     data_criacao = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -151,6 +175,7 @@ def home():
     total_pacientes = Paciente.query.count()
     return render_template('home_dashboard.html', titulo="Dashboard", total_pacientes=total_pacientes)
 
+# ... (outras rotas) ...
 @app.route('/pacientes')
 def listar_pacientes():
     page = request.args.get('page', 1, type=int)
@@ -213,7 +238,7 @@ def nova_consulta(pid):
         return redirect(url_for('detalhe_paciente', paciente_id=pid))
     return render_template('consulta_formulario.html', titulo=f'Nova Consulta', form=form, paciente_id=pid)
 
-@app.route('/paciente/<int:paciente_id>/plano/novo')
+@app.route('/paciente/<int:paciente_id>/plano/novo', methods=['GET', 'POST'])
 def novo_plano(paciente_id):
     paciente = Paciente.query.get_or_404(paciente_id)
     return render_template('plano_formulario.html', titulo=f"Novo Plano para {paciente.nome_completo}", paciente=paciente)
@@ -227,6 +252,80 @@ def gerar_plano_pdf(plano_id):
     pdf = HTML(string=html_renderizado, base_url=request.base_url).write_pdf()
     return Response(pdf, mimetype='application/pdf', headers={'Content-Disposition': 'inline; filename=plano_alimentar.pdf'})
 
+@app.route('/plano/<int:plano_id>/assinar', methods=['GET', 'POST'])
+def assinar_plano_pdf(plano_id):
+    plano = PlanoAlimentar.query.get_or_404(plano_id)
+    if request.method == 'POST':
+        if 'certificado' not in request.files:
+            flash('Nenhum arquivo de certificado enviado.', 'danger')
+            return redirect(request.url)
+        file = request.files['certificado']
+        senha = request.form.get('senha_certificado', '')
+        if file.filename == '':
+            flash('Nenhum arquivo selecionado.', 'danger')
+            return redirect(request.url)
+        if not senha:
+            flash('A senha do certificado é obrigatória.', 'danger')
+            return redirect(request.url)
+        if file and file.filename.endswith(('.p12', '.pfx')):
+            temp_cert_path = None
+            try:
+                paciente = plano.paciente
+                data_hoje = datetime.now(timezone.utc).strftime('%d/%m/%Y')
+                html_renderizado = render_template('plano_pdf_template.html', plano=plano, paciente=paciente, data_hoje=data_hoje)
+                pdf_original_bytes = HTML(string=html_renderizado, base_url=request.base_url).write_pdf()
+
+                certificado_bytes = file.read()
+                
+                # --- LÓGICA DE ASSINATURA ROBUSTA ---
+                # 1. Salva o certificado em um arquivo temporário
+                fd, temp_cert_path = tempfile.mkstemp(suffix='.pfx')
+                with os.fdopen(fd, 'wb') as temp_file:
+                    temp_file.write(certificado_bytes)
+                
+                # 2. Carrega o assinador a partir do CAMINHO do arquivo
+                #    A senha pode ser passada como bytes utf-8, que é mais padrão
+                signer = SimpleSigner.load_pkcs12(
+                    pfx_file=temp_cert_path, 
+                    passphrase=senha.encode('utf-8') 
+                )
+                
+                # 3. Transforma o PDF gerado em um stream em memória para o pyhanko ler
+                pdf_stream = io.BytesIO(pdf_original_bytes)
+                pdf_writer = IncrementalPdfFileWriter(pdf_stream)
+                # --- FIM DA LÓGICA ---
+
+                append_signature_field(pdf_writer, SigFieldSpec(sig_field_name='Signature1'))
+
+                pdf_assinado_bytes = sign_pdf(
+                    pdf_writer,
+                    PdfSignatureMetadata(field_name='Signature1'),
+                    signer=signer,
+                )
+
+                return Response(
+                    pdf_assinado_bytes,
+                    mimetype='application/pdf',
+                    headers={'Content-Disposition': f'attachment; filename=plano_assinado_{paciente.nome_completo.split()[0].lower()}.pdf'}
+                )
+            except Exception as e:
+                traceback.print_exc()
+                error_string = str(e).upper()
+                if 'MAC' in error_string or 'PASSWORD' in error_string or 'DECRYPTION' in error_string:
+                     flash('Erro ao decifrar o certificado. A senha está correta?', 'danger')
+                else:
+                    flash(f'Ocorreu um erro inesperado: {str(e)}', 'danger')
+                return redirect(request.url)
+            finally:
+                # Garante que o arquivo temporário seja sempre apagado
+                if temp_cert_path and os.path.exists(temp_cert_path):
+                    os.remove(temp_cert_path)
+        else:
+            flash('Formato de arquivo inválido. Por favor, envie um arquivo .p12 ou .pfx.', 'danger')
+            return redirect(request.url)
+    return render_template('assinar_plano.html', titulo=f"Assinar Plano de {plano.paciente.nome_completo}", plano=plano)
+
+# ... (resto das rotas da API) ...
 @app.route('/meus_alimentos')
 def listar_meus_alimentos():
     page = request.args.get('page', 1, type=int)
@@ -302,12 +401,11 @@ def distribuicao_macros():
             for _ in range(form.num_refeicoes_pequenas.data):
                 form.refeicoes_pequenas_ajustadas.append_entry(data=distribuicao_refeicoes['por_refeicao_pequena'])
     elif request.method == 'POST' and request.form.get('action') == 'recalcular':
-        soma_ajustada = somar_macros_refeicoes(form.refeicoes_grandes_ajustadas.data + form.refeicoes_pequenas_ajustadas.data)
-        flash(f"Soma manual recalculada: Carboidratos: {soma_ajustada['carboidratos']:.1f}g, Proteínas: {soma_ajustada['proteinas']:.1f}g, Gorduras: {soma_ajustada['gorduras']:.1f}g.", 'info')
+        soma_ajustada = somar_macros_refeicoes(form.refeicoes_grandes_ajustadas.data, form.refeicoes_pequenas_ajustadas.data)
+        flash(f"Soma manual recalculada: Carboidratos: {soma_ajustada['carboidrato']:.1f}g, Proteínas: {soma_ajustada['proteina']:.1f}g, Gorduras: {soma_ajustada['gordura']:.1f}g.", 'info')
         return render_template('distribuicao_macros.html', titulo="Calculadora de Distribuição de Macros", form=form, resultado=None)
     return render_template('distribuicao_macros.html', titulo="Calculadora de Distribuição de Macros", form=form, resultado=resultado_final)
 
-# --- ROTAS DA API ---
 @app.route('/api/calcular_distribuicao', methods=['POST'])
 def api_calcular_distribuicao():
     dados = request.get_json()
@@ -320,36 +418,6 @@ def api_calcular_distribuicao():
     except Exception as e:
         return jsonify({'sucesso': False, 'erro': str(e)}), 400
 
-@app.route('/api/buscar_alimentos', methods=['GET'])
-def api_buscar_alimentos():
-    termo_busca = request.args.get('q', '')
-    url_api = "https://br.openfoodfacts.org/cgi/search.pl"
-    params = {"search_terms": termo_busca, "search_simple": 1, "action": "process", "json": 1, "page_size": 20}
-    try:
-        response = requests.get(url_api, params=params)
-        response.raise_for_status()
-        dados_api = response.json()
-        resultados = []
-        for produto in dados_api.get("products", []):
-            nutrientes = produto.get('nutriments', {})
-            nome = produto.get('product_name_pt', produto.get('product_name', 'Nome não disponível'))
-            kcal = nutrientes.get('energy-kcal_100g', 0) or 0
-            carboidratos = nutrientes.get('carbohydrates_100g', 0) or 0
-            proteinas = nutrientes.get('proteins_100g', 0) or 0
-            gorduras = nutrientes.get('fat_100g', 0) or 0
-            descricao = f"Por 100g - Kcal: {kcal} | C: {carboidratos}g | P: {proteinas}g | G: {gorduras}g"
-            resultados.append({'id': produto.get('code', ''), 'nome': nome, 'marca': produto.get('brands', 'N/A'), 'descricao': descricao, 'kcal_100g': kcal, 'gorduras_100g': gorduras, 'carboidratos_100g': carboidratos, 'proteinas_100g': proteinas})
-        return jsonify({'sucesso': True, 'resultados': resultados})
-    except requests.exceptions.RequestException as e:
-        return jsonify({'sucesso': False, 'erro': f'Erro de comunicação: {e}'}), 500
-
-@app.route('/api/meus_alimentos/buscar')
-def api_buscar_meus_alimentos():
-    termo_busca = request.args.get('q', '')
-    alimentos_encontrados = Alimento.query.filter(Alimento.nome.ilike(f'%{termo_busca}%')).limit(20).all()
-    resultados = [{'id': a.id, 'nome': a.nome, 'marca': a.marca, 'kcal_100g': a.kcal_100g, 'carboidratos_100g': a.carboidratos_100g, 'proteinas_100g': a.proteinas_100g, 'gorduras_100g': a.gorduras_100g, 'origem': 'local'} for a in alimentos_encontrados]
-    return jsonify({'sucesso': True, 'resultados': resultados})
-
 @app.route('/api/alimentos/autocomplete')
 def api_alimentos_autocomplete():
     termo_busca = request.args.get('q', '')
@@ -359,13 +427,8 @@ def api_alimentos_autocomplete():
     alimentos_locais = Alimento.query.filter(Alimento.nome.ilike(f'%{termo_busca}%')).limit(5).all()
     for alimento in alimentos_locais:
         resultados.append({
-            'value': f"local-{alimento.id}",
-            'text': f"{alimento.nome} ({alimento.marca})",
-            'dados_completos': {
-                'id': alimento.id, 'nome': alimento.nome, 'marca': alimento.marca,
-                'kcal_100g': alimento.kcal_100g, 'carboidratos_100g': alimento.carboidratos_100g,
-                'proteinas_100g': alimento.proteinas_100g, 'gorduras_100g': alimento.gorduras_100g, 'origem': 'local'
-            }
+            'value': f"local-{alimento.id}", 'text': f"{alimento.nome} ({alimento.marca})",
+            'dados_completos': { 'id': alimento.id, 'nome': alimento.nome, 'marca': alimento.marca, 'kcal_100g': alimento.kcal_100g, 'carboidratos_100g': alimento.carboidratos_100g, 'proteinas_100g': alimento.proteinas_100g, 'gorduras_100g': alimento.gorduras_100g, 'origem': 'local' }
         })
     try:
         url_api = "https://br.openfoodfacts.org/cgi/search.pl"
@@ -384,38 +447,12 @@ def api_alimentos_autocomplete():
             gord = nutrientes.get('fat_100g', 0) or 0
             resultados.append({
                 'value': produto.get('code', ''), 'text': f"{nome} ({marca}) - [Online]",
-                'dados_completos': {
-                    'id': produto.get('code', ''), 'nome': nome, 'marca': marca, 'kcal_100g': kcal,
-                    'carboidratos_100g': carbs, 'proteinas_100g': prot, 'gorduras_100g': gord, 'origem': 'online'
-                }
+                'dados_completos': { 'id': produto.get('code', ''), 'nome': nome, 'marca': marca, 'kcal_100g': kcal, 'carboidratos_100g': carbs, 'proteinas_100g': prot, 'gorduras_100g': gord, 'origem': 'online' }
             })
     except requests.exceptions.RequestException:
         pass
     return jsonify(resultados)
-
-@app.route('/api/alimentos/salvar', methods=['POST'])
-def api_salvar_alimento():
-    dados_alimento = request.get_json()
-    id_food = dados_alimento.get('id')
-    if not id_food:
-        return jsonify({'sucesso': False, 'erro': 'ID do alimento inválido.'}), 400
-    alimento_existente = Alimento.query.filter_by(fatsecret_food_id=id_food).first()
-    if alimento_existente:
-        return jsonify({'sucesso': False, 'erro': 'Este alimento já está salvo.'}), 409
-    try:
-        novo_alimento = Alimento(
-            nome=dados_alimento.get('nome'), marca=dados_alimento.get('marca'),
-            kcal_100g=dados_alimento.get('kcal_100g'), carboidratos_100g=dados_alimento.get('carboidratos_100g'),
-            proteinas_100g=dados_alimento.get('proteinas_100g'), gorduras_100g=dados_alimento.get('gorduras_100g'),
-            origem='OpenFoodFacts', fatsecret_food_id=id_food
-        )
-        db.session.add(novo_alimento)
-        db.session.commit()
-        return jsonify({'sucesso': True, 'mensagem': f"'{novo_alimento.nome}' salvo com sucesso!"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'sucesso': False, 'erro': f'Erro ao salvar: {str(e)}'}), 500
-        
+    
 @app.route('/api/paciente/<int:paciente_id>/plano/salvar', methods=['POST'])
 def api_salvar_plano(paciente_id):
     dados_plano = request.get_json()
@@ -424,7 +461,6 @@ def api_salvar_plano(paciente_id):
             paciente_id=paciente_id, 
             nome_plano=dados_plano.get('nome_plano'), 
             objetivo_calorico_final=dados_plano.get('objetivo_calorico'),
-            # MUDANÇA: Salvando os novos campos
             orientacoes_diabetes=dados_plano.get('orientacoes_diabetes', None),
             orientacoes_nutricao=dados_plano.get('orientacoes_nutricao', None)
         )

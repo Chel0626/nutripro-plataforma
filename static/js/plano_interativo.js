@@ -1,10 +1,10 @@
-// static/js/plano_interativo.js (Com lógica de Orientações Gerais)
+// static/js/plano_interativo.js (Versão com exibição de Gorduras)
+
 document.addEventListener('DOMContentLoaded', function() {
     // --- SELETORES DOS ELEMENTOS ---
     const formMetas = document.getElementById('form-metas');
     const refeicoesContainer = document.getElementById('refeicoes-container');
     const btnSalvarPlano = document.getElementById('btn-salvar-plano');
-    // Novos seletores para a seção de Orientações
     const diabetesCheck = document.getElementById('diabetes-check');
     const diabetesTextareaContainer = document.getElementById('diabetes-textarea-container');
     const nutricaoCheck = document.getElementById('nutricao-check');
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnSalvarPlano) {
         btnSalvarPlano.addEventListener('click', handleSalvarPlano);
     }
-    // Novos listeners para os checkboxes
     if (diabetesCheck) {
         diabetesCheck.addEventListener('change', function() {
             diabetesTextareaContainer.style.display = this.checked ? 'block' : 'none';
@@ -66,16 +65,18 @@ document.addEventListener('DOMContentLoaded', function() {
             div.className = 'refeicao-bloco card mb-4';
             div.innerHTML = `
                 <div class="card-header">
-                    <div class="d-flex justify-content-between">
-                        <h5>${nome}</h5>
-                        <small class="text-muted"><strong>Metas:</strong> ${meta.carboidrato.toFixed(1)}g Carb. | ${meta.proteina.toFixed(1)}g Prot. | ${meta.gordura.toFixed(1)}g Gord.</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <input type="text" class="form-control form-control-lg meal-title-input" value="${nome}" placeholder="Nome da Refeição">
+                        <small class="text-muted ms-3 text-nowrap"><strong>Metas:</strong> ${meta.carboidrato.toFixed(1)}g Carb. | ${meta.proteina.toFixed(1)}g Prot. | ${meta.gordura.toFixed(1)}g Gord.</small>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <select id="busca-alimento-${index}" class="form-control" placeholder="Digite para buscar um alimento..."></select>
+                    <div class="row">
+                        <div class="col-md-9">
+                           <select id="busca-alimento-${index}" placeholder="Digite para buscar um alimento..."></select>
+                        </div>
                     </div>
-                    <ul class="list-group list-group-flush food-item-list"></ul>
+                    <ul class="list-group list-group-flush food-item-list mt-3"></ul>
                 </div>
                 <div class="card-footer text-end">
                     <strong>Totais:</strong> <span class="total-carb">0.0</span>g Carb. | <span class="total-prot">0.0</span>g Prot. | <span class="total-gord">0.0</span>g Gord.
@@ -110,8 +111,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.blur();
             },
             render: {
-                option: function(data, escape) { return `<div>${escape(data.text)}</div>`; },
-                no_results: function(data, escape) { return '<div class="no-results">Nenhum alimento encontrado.</div>'; },
+                // MUDANÇA 1: Adicionando Gordura (G:) na lista de resultados da busca
+                option: function(data, escape) {
+                    const macros = data.dados_completos;
+                    return `<div class="d-flex justify-content-between">
+                                <div>${escape(data.text)}</div>
+                                <div class="text-muted small ms-4 text-nowrap">
+                                    C: ${macros.carboidratos_100g.toFixed(1)}g | P: ${macros.proteinas_100g.toFixed(1)}g | G: ${macros.gorduras_100g.toFixed(1)}g
+                                </div>
+                            </div>`;
+                },
+                no_results: function(data, escape) {
+                    return '<div class="no-results">Nenhum alimento encontrado.</div>';
+                },
             },
         });
     }
@@ -119,34 +131,41 @@ document.addEventListener('DOMContentLoaded', function() {
     function adicionarAlimentoNaRefeicao(foodData, mealElement) {
         const itemList = mealElement.querySelector('.food-item-list');
         const li = document.createElement('li');
-        li.className = 'list-group-item food-item d-flex align-items-center gap-3 py-3';
+        li.className = 'list-group-item food-item py-3';
         li.dataset.nome = foodData.nome;
         li.dataset.marca = foodData.marca;
         li.dataset.baseCarb = foodData.carboidratos_100g;
         li.dataset.baseProt = foodData.proteinas_100g;
         li.dataset.baseGord = foodData.gorduras_100g;
         li.dataset.baseKcal = foodData.kcal_100g;
+        
         li.innerHTML = `
-            <div class="flex-grow-1">
-                <strong>${foodData.nome}</strong> <small class="text-muted">(${foodData.marca})</small>
-                <div class="row gx-2 mt-2">
+            <div class="w-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>${foodData.nome}</strong> 
+                        <small class="text-muted">(${foodData.marca})</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="item-macros-display text-primary fw-bold text-nowrap" style="min-width: 240px;"></div>
+                        <div class="d-flex align-items-center">
+                            <input type="number" class="form-control form-control-sm food-quantity" value="100" style="width: 75px;" title="Quantidade em Gramas">
+                            <span class="ms-1">g</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger btn-remove-food" title="Remover Alimento">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row gx-2">
                     <div class="col-md-6">
-                        <label class="form-label-sm">Medida Caseira</label>
-                        <input type="text" class="form-control form-control-sm food-medida" placeholder="Ex: 1 fatia">
+                        <input type="text" class="form-control form-control-sm food-medida" placeholder="Medida Caseira (Ex: 1 unidade)">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label-sm">Substituições</label>
-                        <input type="text" class="form-control form-control-sm food-substituicoes" placeholder="Ex: 1 pão francês">
+                        <input type="text" class="form-control form-control-sm food-substituicoes" placeholder="Substituições (Ex: 1 pão)">
                     </div>
                 </div>
             </div>
-            <div class="d-flex align-items-center">
-                <input type="number" class="form-control form-control-sm food-quantity" value="100" style="width: 80px;" title="Quantidade em Gramas">
-                <span class="ms-1">g</span>
-            </div>
-            <button class="btn btn-sm btn-outline-danger btn-remove-food" title="Remover Alimento">
-                <i class="bi bi-x-lg"></i>
-            </button>
         `;
         itemList.appendChild(li);
         updateMealTotals(mealElement);
@@ -154,12 +173,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateMealTotals(mealElement) {
         let totalCarb = 0, totalProt = 0, totalGord = 0;
-        mealElement.querySelectorAll('.food-item').forEach(item => {
+        const items = mealElement.querySelectorAll('.food-item');
+        items.forEach(item => {
             const quantidade = parseFloat(item.querySelector('.food-quantity').value) || 0;
             const fator = quantidade / 100.0;
-            totalCarb += (parseFloat(item.dataset.baseCarb) || 0) * fator;
-            totalProt += (parseFloat(item.dataset.baseProt) || 0) * fator;
-            totalGord += (parseFloat(item.dataset.baseGord) || 0) * fator;
+            const itemCarb = (parseFloat(item.dataset.baseCarb) || 0) * fator;
+            const itemProt = (parseFloat(item.dataset.baseProt) || 0) * fator;
+            const itemGord = (parseFloat(item.dataset.baseGord) || 0) * fator;
+            
+            const displayElement = item.querySelector('.item-macros-display');
+            if (displayElement) {
+                // MUDANÇA 2: Adicionando Gordura (G:) na exibição do item já adicionado
+                displayElement.innerHTML = `C: ${itemCarb.toFixed(1)}g | P: ${itemProt.toFixed(1)}g | G: ${itemGord.toFixed(1)}g`;
+            }
+            
+            totalCarb += itemCarb;
+            totalProt += itemProt;
+            totalGord += itemGord;
         });
         mealElement.querySelector('.total-carb').textContent = totalCarb.toFixed(1);
         mealElement.querySelector('.total-prot').textContent = totalProt.toFixed(1);
@@ -173,9 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Você precisa primeiro definir as metas para gerar as refeições.');
             return null;
         }
-
         blocosRefeicao.forEach(bloco => {
-            const nomeRefeicao = bloco.querySelector('h5').textContent;
+            const nomeRefeicao = bloco.querySelector('.meal-title-input').value;
             const metasTexto = bloco.querySelector('small.text-muted').textContent;
             const metas = {
                 carboidrato: parseFloat(metasTexto.match(/(\d+\.?\d*)g Carb/)[1]) || 0,
@@ -206,32 +235,26 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             refeicoes.push({ nome: nomeRefeicao, metas: metas, itens: itens });
         });
-        
         const planoFinal = {
             nome_plano: `Plano de ${document.getElementById('total_kcal').value} kcal`,
             objetivo_calorico: parseInt(document.getElementById('total_kcal').value) || 0,
             refeicoes: refeicoes
         };
-        
-        // Coleta dos dados das novas caixas de texto
-        if (diabetesCheck.checked && document.getElementById('diabetes-textarea').value.trim() !== '') {
+        if (diabetesCheck && diabetesCheck.checked && document.getElementById('diabetes-textarea').value.trim() !== '') {
             planoFinal.orientacoes_diabetes = document.getElementById('diabetes-textarea').value;
         }
-        if (nutricaoCheck.checked && document.getElementById('nutricao-textarea').value.trim() !== '') {
+        if (nutricaoCheck && nutricaoCheck.checked && document.getElementById('nutricao-textarea').value.trim() !== '') {
             planoFinal.orientacoes_nutricao = document.getElementById('nutricao-textarea').value;
         }
-
         return planoFinal;
     }
 
     function handleSalvarPlano() {
         const planoData = construirObjetoPlano();
         if (!planoData) return;
-
         const pacienteId = window.location.pathname.split('/')[2];
         btnSalvarPlano.disabled = true;
         btnSalvarPlano.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
-
         fetch(`/api/paciente/${pacienteId}/plano/salvar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
