@@ -19,30 +19,26 @@ jobs:
         with:
           python-version: '3.11'
 
-      # ---- PASSO NOVO E MELHORADO ----
-      # Instala o MSYS2 e usa seu gerenciador 'pacman' para instalar o GTK3.
-      # Este é o método recomendado oficialmente pela documentação do WeasyPrint.
+      # Configura o MSYS2 e instala o GTK3,
+      # adicionando as bibliotecas necessárias ao PATH do sistema.
       - name: Set up MSYS2 and install GTK3
         uses: msys2/setup-msys2@v2
         with:
-          # Atualiza o banco de dados do pacman e instala o pacote mingw-w64-x86_64-gtk3
           update: true
           install: >-
             mingw-w64-x86_64-gtk3
 
+      # Este passo agora usa o Python principal (que tem o pip),
+      # pois não estamos mais forçando o shell do msys2.
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-        # Adiciona o MSYS2/MinGW ao PATH do sistema para que as DLLs sejam encontradas
-        shell: msys2 {0}
 
-      # ---- COMANDO MODIFICADO COM O CAMINHO CORRETO ----
-      # Aponta o PyInstaller para o caminho onde o MSYS2 instalou as bibliotecas GTK3.
+      # O PyInstaller também usará o Python principal,
+      # mas encontrará as DLLs do GTK porque o MSYS2 as adicionou ao PATH.
       - name: Build executable with PyInstaller
         run: pyinstaller --name NutriPro --onefile --windowed --add-data "templates;templates" --add-data "static;static" --paths "C:/msys64/mingw64/bin" run.py
-        # Adiciona o MSYS2/MinGW ao PATH do sistema também para este passo
-        shell: msys2 {0}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
