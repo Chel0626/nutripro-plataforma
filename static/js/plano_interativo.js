@@ -1,7 +1,10 @@
-// static/js/plano_interativo.js (Versão com exibição de Gorduras)
-
+// static/js/plano_interativo.js
 document.addEventListener('DOMContentLoaded', function() {
     // --- SELETORES DOS ELEMENTOS ---
+    const formCalcCalorias = document.getElementById('form-calc-calorias');
+    const resultadoCalculadoraDiv = document.getElementById('resultado-calculadora');
+    const totalKcalInput = document.getElementById('total_kcal');
+
     const formMetas = document.getElementById('form-metas');
     const refeicoesContainer = document.getElementById('refeicoes-container');
     const btnSalvarPlano = document.getElementById('btn-salvar-plano');
@@ -11,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const nutricaoTextareaContainer = document.getElementById('nutricao-textarea-container');
 
     // --- EVENT LISTENERS ---
+    if (formCalcCalorias) {
+        formCalcCalorias.addEventListener('submit', handleCalcularCalorias);
+    }
     if (formMetas) {
         formMetas.addEventListener('submit', handleDefinirMetas);
     }
@@ -29,6 +35,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     refeicoesContainer.addEventListener('change', handleMudancaEmRefeicao);
     refeicoesContainer.addEventListener('click', handleRemoverItem);
+    
+    // --- FUNÇÕES DE LÓGICA DE EVENTOS ---
+    function handleCalcularCalorias(event) {
+        event.preventDefault();
+        const formData = new FormData(formCalcCalorias);
+        const dados = Object.fromEntries(formData.entries());
+        
+        fetch('/api/calcular_calorias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                const resultado = data.resultado;
+                const caloriasFinais = Math.round(resultado.calorias_objetivo);
+                
+                resultadoCalculadoraDiv.innerHTML = `
+                    <div class="alert alert-success mt-3">
+                        Necessidade Calórica Estimada: <strong>${caloriasFinais} kcal/dia</strong>.
+                        (TMB: ${Math.round(resultado.tmb)} kcal)
+                    </div>
+                `;
+                
+                totalKcalInput.value = caloriasFinais;
+                
+                totalKcalInput.style.transition = 'background-color 0.5s ease';
+                totalKcalInput.style.backgroundColor = '#fff3cd';
+                setTimeout(() => {
+                    totalKcalInput.style.backgroundColor = '';
+                }, 1500);
+
+            } else {
+                resultadoCalculadoraDiv.innerHTML = `<div class="alert alert-danger mt-3">${data.erro}</div>`;
+            }
+        });
+    }
 
     function handleDefinirMetas(event) {
         event.preventDefault();
@@ -111,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.blur();
             },
             render: {
-                // MUDANÇA 1: Adicionando Gordura (G:) na lista de resultados da busca
                 option: function(data, escape) {
                     const macros = data.dados_completos;
                     return `<div class="d-flex justify-content-between">
@@ -121,9 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>`;
                 },
-                no_results: function(data, escape) {
-                    return '<div class="no-results">Nenhum alimento encontrado.</div>';
-                },
+                no_results: function(data, escape) { return '<div class="no-results">Nenhum alimento encontrado.</div>'; },
             },
         });
     }
@@ -183,7 +224,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const displayElement = item.querySelector('.item-macros-display');
             if (displayElement) {
-                // MUDANÇA 2: Adicionando Gordura (G:) na exibição do item já adicionado
                 displayElement.innerHTML = `C: ${itemCarb.toFixed(1)}g | P: ${itemProt.toFixed(1)}g | G: ${itemGord.toFixed(1)}g`;
             }
             
@@ -277,5 +317,25 @@ document.addEventListener('DOMContentLoaded', function() {
             btnSalvarPlano.disabled = false;
             btnSalvarPlano.innerHTML = '<i class="bi bi-save"></i> Salvar Plano Completo';
         });
+    }
+
+    // Função para calcular a idade a partir da data de nascimento
+    function calculateAge(birthDateString) {
+        if (!birthDateString) return '';
+        const birthDate = new Date(birthDateString);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
+    }
+
+    // Preenche a idade se a data de nascimento estiver disponível
+    const idadeInput = document.getElementById('calc-idade');
+    const pacienteDataNascimento = '{{ paciente.data_nascimento.strftime("%Y-%m-%d") if paciente.data_nascimento else "" }}';
+    if(idadeInput && pacienteDataNascimento) {
+        idadeInput.value = calculateAge(pacienteDataNascimento);
     }
 });
