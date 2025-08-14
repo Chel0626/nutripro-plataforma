@@ -19,22 +19,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      # ---- PASSO NOVO ----
-      # Instala o GTK+3 Runtime usando o gerenciador de pacotes do Windows, o Chocolatey.
-      # O "-y" no final confirma a instalação automaticamente.
+      # ---- ALTERAÇÃO 1 ----
+      # Corrigido o nome do pacote de 'gtk3' para 'gtk3-runtime'.
       - name: Install GTK+3 Runtime
-        run: choco install gtk3 --no-progress -y
+        run: choco install gtk3-runtime --no-progress -y
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ---- COMANDO MODIFICADO ----
-      # Adicionamos a flag --paths para dizer ao PyInstaller onde encontrar as DLLs do GTK+.
-      # Isso faz com que ele inclua essas bibliotecas essenciais dentro do .exe final.
+      # ---- ALTERAÇÃO 2 ----
+      # Corrigido o caminho para refletir o novo nome do pacote 'gtk3-runtime'.
       - name: Build executable with PyInstaller
-        run: pyinstaller --name NutriPro --onefile --windowed --add-data "templates;templates" --add-data "static;static" --paths "C:\ProgramData\chocolatey\lib\gtk3\tools\gtk-runtime\bin" run.py
+        run: pyinstaller --name NutriPro --onefile --windowed --add-data "templates;templates" --add-data "static;static" --paths "C:\ProgramData\chocolatey\lib\gtk3-runtime\tools\gtk-runtime\bin" run.py
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
