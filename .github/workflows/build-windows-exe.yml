@@ -1,45 +1,43 @@
 # .github/workflows/build-windows-exe.yml
 
-# Nome do workflow que aparecerá na aba "Actions" do GitHub
 name: Build Windows Executable
 
-# Gatilho: Este workflow vai rodar toda vez que você fizer um 'push' para a branch 'main'
 on:
   push:
     branches: [ "main" ]
 
 jobs:
   build:
-    # A máquina virtual que o Actions vai usar. Essencial que seja 'windows-latest'
     runs-on: windows-latest
 
     steps:
-      # Passo 1: Clona o seu repositório para dentro da máquina virtual
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Passo 2: Configura o ambiente Python na máquina virtual
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11' # Use a mesma versão de Python que você tem localmente
+          python-version: '3.11'
 
-      # Passo 3: Instala todas as dependências do seu projeto a partir do requirements.txt
-      - name: Install dependencies
+      # ---- PASSO NOVO ----
+      # Instala o GTK+3 Runtime usando o gerenciador de pacotes do Windows, o Chocolatey.
+      # O "-y" no final confirma a instalação automaticamente.
+      - name: Install GTK+3 Runtime
+        run: choco install gtk3 --no-progress -y
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Passo 4: Roda o comando do PyInstaller para criar o .exe
-      # Este é o mesmo comando que rodaríamos manualmente
+      # ---- COMANDO MODIFICADO ----
+      # Adicionamos a flag --paths para dizer ao PyInstaller onde encontrar as DLLs do GTK+.
+      # Isso faz com que ele inclua essas bibliotecas essenciais dentro do .exe final.
       - name: Build executable with PyInstaller
-        run: pyinstaller --name NutriPro --onefile --windowed --add-data "templates;templates" --add-data "static;static" run.py
-
-      # Passo 5: Pega o .exe gerado e o disponibiliza para download
+        run: pyinstaller --name NutriPro --onefile --windowed --add-data "templates;templates" --add-data "static;static" --paths "C:\ProgramData\chocolatey\lib\gtk3\tools\gtk-runtime\bin" run.py
+      
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          # Nome do arquivo que você vai baixar
           name: NutriPro-windows-executable
-          # Caminho onde o PyInstaller coloca o .exe gerado
           path: dist/NutriPro.exe
