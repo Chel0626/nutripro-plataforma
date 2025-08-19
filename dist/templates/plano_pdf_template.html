@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ plano.nome_plano }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11pt;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #FFFFFF; 
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #5A6650;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+        .header-text h2 { margin: 0; font-size: 18pt; }
+        .header-text p { margin: 5px 0 0; font-size: 12pt; color: #555; }
+        .header-logo { width: 40mm; height: auto; }
+
+        .patient-info {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #DDE2D3;
+            border-radius: 5px;
+        }
+
+        .orientacoes-gerais {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .orientacoes-gerais .orientacao-box {
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #fdfaf9;
+            border-left: 4px solid #5A6650;
+        }
+        .orientacoes-gerais h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #5A6650;
+            font-size: 14pt;
+        }
+        .orientacoes-gerais p {
+            margin-bottom: 0;
+            white-space: pre-wrap;
+        }
+
+        .meal-group {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .meal-group h3 {
+            background-color: #5A6650;
+            color: #FFFFFF;
+            padding: 10px 15px;
+            border-radius: 5px 5px 0 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-size: 14pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #FFFFFF;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 12px 15px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #ccc; }
+        td { border-top: 1px solid #ddd; }
+
+        .footer {
+            position: fixed;
+            bottom: -1.5cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="footer">
+        Prescrição gerada pela Plataforma NutriPro em {{ data_hoje }}
+    </div>
+
+    <div class="header">
+        <div class="header-text">
+            <h2>Carolina Macedo</h2>
+            <p>Nutricionista • Educadora em Diabetes</p>
+        </div>
+        <img class="header-logo" src="{{ url_for('static', filename='img/logo.jpg', _external=True) }}">
+    </div>
+
+    <div class="patient-info">
+        <strong>Paciente:</strong> {{ paciente.nome_completo }}<br>
+        <strong>Data do Plano:</strong> {{ plano.data_criacao.strftime('%d/%m/%Y') }}<br>
+        <strong>Objetivo Calórico:</strong> ~{{ plano.objetivo_calorico_final }} kcal
+    </div>
+
+    {% if plano.orientacoes_diabetes or plano.orientacoes_nutricao %}
+    <div class="orientacoes-gerais">
+        {% if plano.orientacoes_diabetes %}
+        <div class="orientacao-box">
+            <h3>Educação em Diabetes</h3>
+            <p>{{ plano.orientacoes_diabetes|safe }}</p>
+        </div>
+        {% endif %}
+        {% if plano.orientacoes_nutricao %}
+        <div class="orientacao-box">
+            <h3>Orientações de Nutrição</h3>
+            <p>{{ plano.orientacoes_nutricao|safe }}</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% for refeicao in plano.refeicoes %}
+    <div class="meal-group">
+        <h3>{{ refeicao.nome_refeicao }}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Alimento</th>
+                    <th style="width: 25%;">Medida Caseira</th>
+                    <th style="width: 45%;">Opções de Substituição</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in refeicao.itens %}
+                <tr>
+                    <td><strong>{{ item.nome_alimento }}</strong> ({{ item.quantidade_g|round|int }}g)</td>
+                    <td>{{ item.medida_caseira or '---' }}</td>
+                    <td>{{ item.substituicoes|replace('\n', '<br>')|safe or '---' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
+</body>
+</html>

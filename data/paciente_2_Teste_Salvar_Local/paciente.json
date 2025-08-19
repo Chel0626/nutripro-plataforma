@@ -1,0 +1,10 @@
+{
+  "id": 2,
+  "nome_completo": "Teste Salvar Local",
+  "email": "teste.salvar.local@example.com",
+  "telefone": null,
+  "data_nascimento": null,
+  "peso": null,
+  "altura_cm": null,
+  "sexo": null
+}

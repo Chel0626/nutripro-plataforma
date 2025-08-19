@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card shadow-lg">
+                <div class="card-header {% if edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+                    <h3 class="mb-0"><i class="fas {% if edit_mode %}fa-file-signature{% else %}fa-file-medical{% endif %} me-2"></i>{{ titulo }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.paciente_id.label(class="form-label fw-bold") }}
+                            {% if edit_mode %}
+                                {# Em modo de edição, o paciente não deve ser alterado aqui. Mostramos o nome. #}
+                                <input type="text" class="form-control form-control-lg" value="{{ plano.paciente_plano.nome_completo if plano else 'Carregando...' }}" disabled>
+                                {# Enviamos o ID do paciente de forma oculta para o formulário saber qual é. #}
+                                {{ form.paciente_id(class="d-none") }}
+                            {% else %}
+                                {# Em modo de novo plano, se o paciente_id é fixo (vindo da URL), mostramos o nome. #}
+                                {# Caso contrário (um form geral de novo plano), seria um select. #}
+                                {# Nossa rota novo_plano_alimentar já passa o paciente_id fixo. #}
+                                 <input type="text" class="form-control form-control-lg" value="{{ form.paciente_id.choices[0][1] if form.paciente_id.choices else 'Carregando...' }}" disabled>
+                                 {{ form.paciente_id(class="d-none") }}
+                            {% endif %}
+                            {% if form.paciente_id.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.paciente_id.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.titulo.label(class="form-label fw-bold") }}
+                            {{ form.titulo(class="form-control form-control-lg" + (" is-invalid" if form.titulo.errors else ""), placeholder="Ex: Plano Hipercalórico - Mês 1") }}
+                            {% if form.titulo.errors %}
+                                <div class="invalid-feedback">{% for error in form.titulo.errors %}<span>{{ error }}</span>{% endfor %}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.data_inicio.label(class="form-label fw-bold") }}
+                                {{ form.data_inicio(class="form-control form-control-lg" + (" is-invalid" if form.data_inicio.errors else ""), type="date") }}
+                                {% if form.data_inicio.errors %}
+                                    <div class="invalid-feedback">{% for error in form.data_inicio.errors %}<span>{{ error }}</span>{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.data_fim.label(class="form-label fw-bold") }}
+                                {{ form.data_fim(class="form-control form-control-lg" + (" is-invalid" if form.data_fim.errors else ""), type="date") }}
+                                {% if form.data_fim.errors %}
+                                    <div class="invalid-feedback">{% for error in form.data_fim.errors %}<span>{{ error }}</span>{% endfor %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.objetivo.label(class="form-label fw-bold") }}
+                            {{ form.objetivo(class="form-control" + (" is-invalid" if form.objetivo.errors else ""), rows="3", placeholder="Ex: Ganho de massa muscular, Redução de gordura corporal") }}
+                            {% if form.objetivo.errors %}
+                                <div class="invalid-feedback">{% for error in form.objetivo.errors %}<span>{{ error }}</span>{% endfor %}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.observacoes_gerais.label(class="form-label fw-bold") }}
+                            {{ form.observacoes_gerais(class="form-control" + (" is-invalid" if form.observacoes_gerais.errors else ""), rows="4", placeholder="Ex: Ingerir 2 litros de água por dia. Evitar alimentos processados.") }}
+                            {% if form.observacoes_gerais.errors %}
+                                <div class="invalid-feedback">{% for error in form.observacoes_gerais.errors %}<span>{{ error }}</span>{% endfor %}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            {% if edit_mode and plano_id %}
+                                <a href="{{ url_for('detalhe_plano_alimentar', plano_id=plano_id) }}" class="btn btn-outline-secondary btn-lg me-md-2 mb-2 mb-md-0">Cancelar</a>
+                                {{ form.submit(class="btn btn-warning btn-lg", value="Salvar Alterações no Plano") }}
+                            {% elif paciente_id %}
+                                <a href="{{ url_for('detalhe_paciente', paciente_id=paciente_id) }}" class="btn btn-outline-secondary btn-lg me-md-2 mb-2 mb-md-0">Cancelar</a>
+                                {{ form.submit(class="btn btn-primary btn-lg", value="Criar Plano Alimentar") }}
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

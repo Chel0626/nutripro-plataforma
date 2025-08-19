@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% from "_form_helpers.html" import render_field, render_submit_field %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-md-12">
+            <div class="card shadow-lg">
+                <div class="card-header {% if edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+                    <h3 class="mb-0"><i class="fas {% if edit_mode %}fa-edit{% else %}fa-address-card{% endif %} me-2"></i>{{ titulo }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <h4 class="mt-3">Informações Gerais do Perfil</h4>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ render_field(form.nome_perfil, class="form-control form-control-lg") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ render_field(form.data_inicio_validade, class="form-control form-control-lg") }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                {{ render_field(form.dia, class="form-control form-control-lg") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ render_field(form.fuso_horario, class="form-control form-control-lg") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ render_field(form.unidade_glicemia, class="form-select form-select-lg") }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ render_field(form.taxa_absorcao_carb, class="form-control form-control-lg") }}
+                            </div>
+                        </div>
+
+                        {# Macro para FSI, RC, Basal #}
+                        {% macro render_time_value_list(fieldlist, section_title) %}
+                        <div class="mt-4 p-3 border rounded">
+                            <h5><i class="fas fa-clock me-2"></i>{{ section_title }}
+                                <button type="button" class="btn btn-outline-success btn-sm float-end add-time-value-entry" data-target-list="{{ fieldlist.id }}"><i class="fas fa-plus"></i> Adicionar Horário</button>
+                            </h5>
+                            <div id="{{ fieldlist.id }}-list">
+                                {% for entry_form_wrapper in fieldlist %}
+                                <div class="row time-value-entry mb-2 align-items-center">
+                                    {{ entry_form_wrapper.form.hidden_tag() if entry_form_wrapper.form.csrf_token else '' }}
+                                    <div class="col-md-5">
+                                        {{ render_field(entry_form_wrapper.hora, class="form-control time-input", placeholder="HH:MM", label_visible=(loop.index0 == 0) ) }}
+                                        {# DEBUG PARA HORA EM TIME_VALUE_LIST #}
+                                        <p style="color:blueviolet; font-size: x-small;">DEBUG {{ fieldlist.id }}[{{loop.index0}}].hora.errors: {{ entry_form_wrapper.hora.errors }}</p>
+                                    </div>
+                                    <div class="col-md-5">
+                                        {{ render_field(entry_form_wrapper.valor, class="form-control", label_visible=(loop.index0 == 0) ) }}
+                                        {# DEBUG PARA VALOR EM TIME_VALUE_LIST #}
+                                        <p style="color:blueviolet; font-size: x-small;">DEBUG {{ fieldlist.id }}[{{loop.index0}}].valor.errors: {{ entry_form_wrapper.valor.errors }}</p>
+                                    </div>
+                                    <div class="col-md-2 align-self-end mb-3">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-time-value-entry w-100"><i class="fas fa-trash"></i> Remover</button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div id="{{ fieldlist.id }}-template" style="display: none;">
+                                <div class="row time-value-entry mb-2 align-items-center">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Hora (HH:MM)</label>
+                                        <input type="text" class="form-control time-input" placeholder="HH:MM" data-field-suffix="hora">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Valor</label>
+                                        <input type="number" step="any" class="form-control" data-field-suffix="valor">
+                                    </div>
+                                    <div class="col-md-2 align-self-end mb-3">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-time-value-entry w-100"><i class="fas fa-trash"></i> Remover</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endmacro %}
+
+                        {{ render_time_value_list(form.fsi_entries, form.fsi_entries.label.text) }}
+                        {{ render_time_value_list(form.rc_entries, form.rc_entries.label.text) }}
+                        {{ render_time_value_list(form.basal_entries, form.basal_entries.label.text) }}
+
+                        <div class="mt-4 p-3 border rounded">
+                             <h5><i class="fas fa-bullseye me-2"></i>{{ form.meta_entries.label.text }}
+                                <button type="button" class="btn btn-outline-success btn-sm float-end add-meta-entry" data-target-list="{{ form.meta_entries.id }}">
+                                    <i class="fas fa-plus"></i> Adicionar Horário de Meta
+                                </button>
+                            </h5>
+                            <div id="{{ form.meta_entries.id }}-list">
+                            {% for meta_entry_form_wrapper in form.meta_entries %}
+                                <div class="row time-value-entry meta-entry-row mb-2 align-items-center">
+                                    {{ meta_entry_form_wrapper.form.hidden_tag() if meta_entry_form_wrapper.form.csrf_token else '' }}
+                                    <div class="col-md-4">
+                                        {{ render_field(meta_entry_form_wrapper.hora, class="form-control meta-time-input", label_visible=(loop.index0 == 0), placeholder="HH:MM") }}
+                                        {# +++ LINHA DE DEBUG ADICIONADA AQUI +++ #}
+                                        <p style="color:darkorange; font-size: x-small;">DEBUG meta_entries[{{loop.index0}}].hora.errors: {{ meta_entry_form_wrapper.hora.errors }}</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {{ render_field(meta_entry_form_wrapper.valor_baixo, class="form-control meta-low-input", label_visible=(loop.index0 == 0), placeholder="Baixo") }}
+                                        {# +++ LINHA DE DEBUG ADICIONADA AQUI +++ #}
+                                        <p style="color:darkorange; font-size: x-small;">DEBUG meta_entries[{{loop.index0}}].valor_baixo.errors: {{ meta_entry_form_wrapper.valor_baixo.errors }}</p>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {{ render_field(meta_entry_form_wrapper.valor_alto, class="form-control meta-high-input", label_visible=(loop.index0 == 0), placeholder="Alto") }}
+                                        {# +++ LINHA DE DEBUG ADICIONADA AQUI +++ #}
+                                        <p style="color:darkorange; font-size: x-small;">DEBUG meta_entries[{{loop.index0}}].valor_alto.errors: {{ meta_entry_form_wrapper.valor_alto.errors }}</p>
+                                    </div>
+                                    <div class="col-md-2 align-self-end mb-3">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-meta-entry w-100"><i class="fas fa-trash"></i> Remover</button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            </div>
+                            <div id="{{ form.meta_entries.id }}-template" style="display: none;">
+                                <div class="row time-value-entry meta-entry-row mb-2 align-items-center">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Hora (HH:MM)</label>
+                                        <input type="text" class="form-control meta-time-input" placeholder="HH:MM" data-field-suffix="hora">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Valor Baixo</label>
+                                        <input type="number" step="any" class="form-control meta-low-input" data-field-suffix="valor_baixo">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Valor Alto</label>
+                                        <input type="number" step="any" class="form-control meta-high-input" data-field-suffix="valor_alto">
+                                    </div>
+                                    <div class="col-md-2 align-self-end mb-3">
+                                        <button type="button" class="btn btn-outline-danger btn-sm remove-meta-entry w-100"><i class="fas fa-trash"></i> Remover</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{{ url_for('detalhe_paciente', paciente_id=paciente.id) }}" class="btn btn-outline-secondary btn-lg me-md-2 mb-2 mb-md-0">Cancelar</a>
+                            {% if edit_mode %}
+                                {{ render_submit_field(form.submit, class="btn btn-warning btn-lg", value="Salvar Alterações") }}
+                            {% else %}
+                                {{ render_submit_field(form.submit, class="btn btn-primary btn-lg", value="Criar Perfil de Diabetes") }}
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// JavaScript para adicionar/remover linhas dinamicamente (como fornecido no Turno 40/46)
+// ... (cole o JavaScript completo do Turno 40/46 aqui) ...
+document.addEventListener('DOMContentLoaded', function () {
+    function setupFieldList(listBaseId, entryClassName, removeButtonClass, addButtonClass) {
+        const addButton = document.querySelector('.' + addButtonClass + '[data-target-list="' + listBaseId + '"]');
+        const listElement = document.getElementById(listBaseId + "-list");
+        const templateNode = document.getElementById(listBaseId + "-template");
+
+        if (!addButton || !listElement || !templateNode) {
+            // console.warn("Could not find all elements for FieldList:", listBaseId);
+            return;
+        }
+
+        function reindexList() {
+            const entries = listElement.querySelectorAll('.' + entryClassName);
+            entries.forEach((entry, index) => {
+                const csrfInput = entry.querySelector('input[name$="-csrf_token"]');
+                if (csrfInput) {
+                    csrfInput.name = `${listBaseId}-${index}-csrf_token`;
+                    csrfInput.id = `${listBaseId}-${index}-csrf_token`;
+                }
+                entry.querySelectorAll('input[data-field-suffix], select[data-field-suffix], textarea[data-field-suffix]').forEach(field => {
+                    const suffix = field.dataset.fieldSuffix;
+                    field.name = `${listBaseId}-${index}-${suffix}`;
+                    field.id = `${listBaseId}-${index}-${suffix}`;
+                    const label = entry.querySelector(`label[for="${field.id}"]`); // Tenta encontrar label pelo ID atualizado
+                    if(label) label.htmlFor = field.id; // Garante que o label aponta para o ID correto
+                });
+            });
+        }
+
+        addButton.addEventListener('click', function () {
+            const newEntry = templateNode.firstElementChild.cloneNode(true);
+            // Limpar valores e garantir que os nomes sejam definidos antes de adicionar ao DOM para reindexar
+            const newIndex = listElement.children.length; // Índice ANTES de adicionar
+            newEntry.querySelectorAll('input[data-field-suffix], select[data-field-suffix], textarea[data-field-suffix]').forEach(field => {
+                const suffix = field.dataset.fieldSuffix;
+                field.name = `${listBaseId}-${newIndex}-${suffix}`; // Define o nome correto para o novo item
+                field.id = `${listBaseId}-${newIndex}-${suffix}`;   // Define o ID correto para o novo item
+                if (field.type === 'text' || field.type === 'number' || field.tagName === 'TEXTAREA') field.value = '';
+                if (field.tagName === 'SELECT') field.selectedIndex = 0;
+
+                // Atualiza o 'for' do label correspondente no template clonado
+                const label = newEntry.querySelector(`label[data-field-suffix-label="${suffix}"]`);
+                if (label) label.htmlFor = field.id;
+            });
+             // Lidar com o hidden tag CSRF se ele existir no template
+            const csrfTemplateInput = newEntry.querySelector('input[name$="-csrf_token"]'); // Exemplo de seletor
+            if(csrfTemplateInput) {
+                csrfTemplateInput.name = `${listBaseId}-${newIndex}-csrf_token`;
+                csrfTemplateInput.id = `${listBaseId}-${newIndex}-csrf_token`;
+            }
+
+            listElement.appendChild(newEntry);
+            // Não precisa reindexar tudo aqui se os nomes são setados corretamente na adição.
+            // Mas pode ser útil se a ordem importa muito ou se há deleções.
+        });
+
+        listElement.addEventListener('click', function (event) {
+            const removeButton = event.target.closest('.' + removeButtonClass);
+            if (removeButton && listElement.contains(removeButton)) {
+                const entryToRemove = removeButton.closest('.' + entryClassName);
+                if (entryToRemove) {
+                    entryToRemove.remove();
+                    reindexList(); // Reindexa toda a lista após remover para manter os índices sequenciais
+                }
+            }
+        });
+        reindexList(); // Reindexar na carga da página para os itens existentes (edição)
+    }
+
+    // Adaptação para o template: Adicione data-field-suffix-label aos labels no template JS se quiser que sejam atualizados
+    // Exemplo no template JS: <label class="form-label" data-field-suffix-label="hora">Hora (HH:MM)</label>
+
+    setupFieldList("{{ form.fsi_entries.id }}", "time-value-entry", "remove-time-value-entry", "add-time-value-entry");
+    setupFieldList("{{ form.rc_entries.id }}", "time-value-entry", "remove-time-value-entry", "add-time-value-entry");
+    setupFieldList("{{ form.basal_entries.id }}", "time-value-entry", "remove-time-value-entry", "add-time-value-entry");
+    setupFieldList("{{ form.meta_entries.id }}", "meta-entry-row", "remove-meta-entry", "add-meta-entry"); // Para as metas
+});
+</script>
+{% endblock %}

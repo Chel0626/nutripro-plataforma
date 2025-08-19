@@ -1,0 +1,54 @@
+{# templates/_form_helpers.html #}
+{% macro render_field(field, label_visible=true) %}
+  <div class="form-group mb-3">
+    {% if label_visible and field.type != 'BooleanField' and field.type != 'RadioField' %} {# Não mostrar label separada para bool/radio aqui se já está ao lado #}
+      {{ field.label(class="form-label fw-bold") }}
+    {% endif %}
+
+    {# Coleta a classe existente e adiciona 'is-invalid' se houver erros #}
+    {% set existing_class = kwargs.get('class', '') %}
+    {% if field.errors %}
+        {% set field_class = existing_class + ' is-invalid' %}
+    {% else %}
+        {% set field_class = existing_class %}
+    {% endif %}
+
+    {% if field.type == 'BooleanField' %}
+      <div class="form-check">
+        {{ field(class="form-check-input " + field_class, **kwargs) }} {# Adiciona field_class #}
+        {{ field.label(class="form-check-label fw-bold") }} {# Label para o checkbox ao lado dele #}
+      </div>
+    {% elif field.type == 'RadioField' %}
+        {% if label_visible %} {# Label principal para o grupo de RadioField #}
+            <label class="form-label fw-bold">{{ field.label.text }}</label>
+        {% endif %}
+        <div> {# Envolve os radios para melhor agrupamento visual dos erros abaixo se necessário #}
+            {% for subfield in field %}
+            <div class="form-check form-check-inline">
+                {{ subfield(class="form-check-input " + field_class, **kwargs) }} {# Adiciona field_class #}
+                {{ subfield.label(class="form-check-label") }}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+      {# Para outros campos, como StringField, FloatField, etc. #}
+      {# O 'form-control' ou 'form-select' já é geralmente passado via kwargs.class no template que chama esta macro #}
+      {{ field(class=field_class, **kwargs) }}
+    {% endif %}
+
+    {# Exibe os erros ABAIXO do campo #}
+    {% if field.errors %}
+      <div class="invalid-feedback d-block"> {# 'd-block' força a exibição do feedback #}
+          {% for error in field.errors %}
+            <span>{{ error }}</span><br>
+          {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro render_submit_field(field) %}
+    {# Remove kwargs.pop('class', ...) para permitir que classes sejam adicionadas/substituídas #}
+    {% set btn_class = kwargs.get('class', 'btn-primary') %}
+    {{ field(class="btn " + btn_class, **kwargs) }}
+{% endmacro %}

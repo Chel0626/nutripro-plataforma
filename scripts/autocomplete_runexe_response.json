@@ -1,0 +1,122 @@
+[
+  {
+    "carboidratos_100g": 11.6,
+    "gorduras_100g": 7.1,
+    "id": 526,
+    "kcal_100g": 154.0,
+    "marca": "TACO",
+    "nome": "Arroz carreteiro",
+    "origem": "TACO",
+    "proteinas_100g": 10.8,
+    "text": "Arroz carreteiro",
+    "value": "Arroz carreteiro"
+  },
+  {
+    "carboidratos_100g": 25.8,
+    "gorduras_100g": 1.0,
+    "id": 1,
+    "kcal_100g": 124.0,
+    "marca": "TACO",
+    "nome": "Arroz, integral, cozido",
+    "origem": "TACO",
+    "proteinas_100g": 2.6,
+    "text": "Arroz, integral, cozido",
+    "value": "Arroz, integral, cozido"
+  },
+  {
+    "carboidratos_100g": 77.5,
+    "gorduras_100g": 1.9,
+    "id": 2,
+    "kcal_100g": 360.0,
+    "marca": "TACO",
+    "nome": "Arroz, integral, cru",
+    "origem": "TACO",
+    "proteinas_100g": 7.3,
+    "text": "Arroz, integral, cru",
+    "value": "Arroz, integral, cru"
+  },
+  {
+    "carboidratos_100g": 28.1,
+    "gorduras_100g": 0.2,
+    "id": 3,
+    "kcal_100g": 128.0,
+    "marca": "TACO",
+    "nome": "Arroz, tipo 1, cozido",
+    "origem": "TACO",
+    "proteinas_100g": 2.5,
+    "text": "Arroz, tipo 1, cozido",
+    "value": "Arroz, tipo 1, cozido"
+  },
+  {
+    "carboidratos_100g": 78.8,
+    "gorduras_100g": 0.3,
+    "id": 4,
+    "kcal_100g": 358.0,
+    "marca": "TACO",
+    "nome": "Arroz, tipo 1, cru",
+    "origem": "TACO",
+    "proteinas_100g": 7.2,
+    "text": "Arroz, tipo 1, cru",
+    "value": "Arroz, tipo 1, cru"
+  },
+  {
+    "carboidratos_100g": 28.2,
+    "gorduras_100g": 0.4,
+    "id": 5,
+    "kcal_100g": 130.0,
+    "marca": "TACO",
+    "nome": "Arroz, tipo 2, cozido",
+    "origem": "TACO",
+    "proteinas_100g": 2.6,
+    "text": "Arroz, tipo 2, cozido",
+    "value": "Arroz, tipo 2, cozido"
+  },
+  {
+    "carboidratos_100g": 78.9,
+    "gorduras_100g": 0.3,
+    "id": 6,
+    "kcal_100g": 358.0,
+    "marca": "TACO",
+    "nome": "Arroz, tipo 2, cru",
+    "origem": "TACO",
+    "proteinas_100g": 7.2,
+    "text": "Arroz, tipo 2, cru",
+    "value": "Arroz, tipo 2, cru"
+  },
+  {
+    "carboidratos_100g": 20.4,
+    "gorduras_100g": 3.2,
+    "id": 527,
+    "kcal_100g": 136.0,
+    "marca": "TACO",
+    "nome": "Baião de dois, arroz e feijão-de-corda",
+    "origem": "TACO",
+    "proteinas_100g": 6.2,
+    "text": "Baião de dois, arroz e feijão-de-corda",
+    "value": "Baião de dois, arroz e feijão-de-corda"
+  },
+  {
+    "carboidratos_100g": 41.7,
+    "gorduras_100g": 8.3,
+    "id": 530,
+    "kcal_100g": 274.0,
+    "marca": "TACO",
+    "nome": "Bolinho de arroz",
+    "origem": "TACO",
+    "proteinas_100g": 8.0,
+    "text": "Bolinho de arroz",
+    "value": "Bolinho de arroz"
+  },
+  {
+    "carboidratos_100g": 83.9,
+    "gorduras_100g": 1.2,
+    "id": 27,
+    "kcal_100g": 386.0,
+    "marca": "TACO",
+    "nome": "Creme de arroz, pó",
+    "origem": "TACO",
+    "proteinas_100g": 7.0,
+    "text": "Creme de arroz, pó",
+    "value": "Creme de arroz, pó"
+  }
+]

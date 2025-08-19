@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% from "_form_helpers.html" import render_field %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ titulo }}</h3>
+                </div>
+                <div class="card-body">
+                    <p>Calcule a distribuição automática e, se desejar, ajuste manualmente os valores por refeição.</p>
+                    <form method="POST" id="distribuicao-form">
+                        {{ form.csrf_token }}
+                        <div class="mb-3">{{ render_field(form.total_kcal) }}</div>
+                        <h5 class="mt-4">Distribuição de Macronutrientes (%)</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">{{ render_field(form.perc_carb) }}</div>
+                            <div class="col-md-4 mb-3">{{ render_field(form.perc_prot) }}</div>
+                            <div class="col-md-4 mb-3">{{ render_field(form.perc_gord) }}</div>
+                        </div>
+                        <h5 class="mt-4">Distribuição por Refeições</h5>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">{{ render_field(form.num_refeicoes_grandes) }}</div>
+                            <div class="col-md-4 mb-3">{{ render_field(form.num_refeicoes_pequenas) }}</div>
+                            <div class="col-md-4 mb-3">{{ render_field(form.perc_dist_grandes) }}</div>
+                        </div>
+                        <button type="submit" name="action" value="calcular" class="btn btn-primary w-100">1. Calcular Distribuição Automática</button>
+
+                        {% if resultado %}
+                        <hr class="my-4">
+                        <h4>Resultados da Distribuição Automática</h4>
+                        <div class="alert alert-info">
+                            <h5>Totais Diários (em gramas):</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Carboidratos:</strong> <span id="total-carb">{{ resultado.total_macros.carboidrato|round(1) }}</span> g</li>
+                                <li><strong>Proteínas:</strong> <span id="total-prot">{{ resultado.total_macros.proteina|round(1) }}</span> g</li>
+                                <li><strong>Gorduras:</strong> <span id="total-gord">{{ resultado.total_macros.gordura|round(1) }}</span> g</li>
+                            </ul>
+                        </div>
+
+                        <h4 class="mt-4">Ajuste Manual das Refeições</h4>
+                        <p class="text-muted">Altere os valores abaixo. A diferença será redistribuída automaticamente entre as outras refeições do mesmo tipo.</p>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="toggle-redistribuicao" checked>
+                            <label class="form-check-label" for="toggle-redistribuicao">Ativar redistribuição automática</label>
+                        </div>
+
+                        {% if form.refeicoes_grandes_ajustadas.entries %}
+                            <h5>Refeições Grandes</h5>
+                            {% for refeicao_grande_form in form.refeicoes_grandes_ajustadas %}
+                                <div class="card mb-3 meal-group" data-group="grandes">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Refeição Grande {{ loop.index }}</h6>
+                                        <div class="row">
+                                            <div class="col">{{ render_field(refeicao_grande_form.carboidrato, class="form-control macro-input", type="number", step="0.1") }}</div>
+                                            <div class="col">{{ render_field(refeicao_grande_form.proteina, class="form-control macro-input", type="number", step="0.1") }}</div>
+                                            <div class="col">{{ render_field(refeicao_grande_form.gordura, class="form-control macro-input", type="number", step="0.1") }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        {% if form.refeicoes_pequenas_ajustadas.entries %}
+                            <h5>Refeições Pequenas</h5>
+                            {% for refeicao_pequena_form in form.refeicoes_pequenas_ajustadas %}
+                                <div class="card mb-3 meal-group" data-group="pequenas">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Refeição Pequena {{ loop.index }}</h6>
+                                        <div class="row">
+                                            <div class="col">{{ render_field(refeicao_pequena_form.carboidrato, class="form-control macro-input", type="number", step="0.1") }}</div>
+                                            <div class="col">{{ render_field(refeicao_pequena_form.proteina, class="form-control macro-input", type="number", step="0.1") }}</div>
+                                            <div class="col">{{ render_field(refeicao_pequena_form.gordura, class="form-control macro-input", type="number", step="0.1") }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <button type="submit" name="action" value="recalcular" class="btn btn-secondary w-100 mt-3">2. Recalcular Totais Manuais</button>
+
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            {% if resultado %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4>Resultados da Distribuição</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <div class="card text-center">
+                                <div class="card-header">
+                                    <strong>Por Refeição Grande</strong>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Carboidratos: {{ resultado.distribuicao.por_refeicao_grande.carboidrato|round(1) }} g<br>
+                                        Proteínas: {{ resultado.distribuicao.por_refeicao_grande.proteina|round(1) }} g<br>
+                                        Gorduras: {{ resultado.distribuicao.por_refeicao_grande.gordura|round(1) }} g
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card text-center">
+                                <div class="card-header">
+                                    <strong>Por Refeição Pequena</strong>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Carboidratos: {{ resultado.distribuicao.por_refeicao_pequena.carboidrato|round(1) }} g<br>
+                                        Proteínas: {{ resultado.distribuicao.por_refeicao_pequena.proteina|round(1) }} g<br>
+                                        Gorduras: {{ resultado.distribuicao.por_refeicao_pequena.gordura|round(1) }} g
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+// ... (O javascript desta página permanece o mesmo) ...
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('distribuicao-form');
+    if (!form) return;
+
+    function handleMacroInput(event) {
+        const redistribuicaoAtiva = document.getElementById('toggle-redistribuicao').checked;
+        if (!redistribuicaoAtiva) {
+            return;
+        }
+
+        const changedInput = event.target;
+        if (!changedInput.classList.contains('macro-input')) return;
+
+        const parentGroup = changedInput.closest('.meal-group');
+        const groupType = parentGroup.dataset.group;
+        const inputName = changedInput.name.split('-').pop();
+        
+        const allInputsInGroup = document.querySelectorAll(`.meal-group[data-group="${groupType}"] .macro-input[name$="${inputName}"]`);
+        const otherInputs = Array.from(allInputsInGroup).filter(input => input !== changedInput);
+
+        if (otherInputs.length === 0) return;
+
+        let originalSum = 0;
+        allInputsInGroup.forEach(input => {
+            originalSum += parseFloat(input.defaultValue || 0);
+        });
+
+        let currentSumOfOthers = 0;
+        otherInputs.forEach(input => {
+            currentSumOfOthers += parseFloat(input.value || 0);
+        });
+
+        const changedValue = parseFloat(changedInput.value || 0);
+        const difference = originalSum - (currentSumOfOthers + changedValue);
+        const adjustmentPerInput = difference / otherInputs.length;
+
+        otherInputs.forEach(input => {
+            const newValue = parseFloat(input.value || 0) + adjustmentPerInput;
+            input.value = newValue.toFixed(1);
+        });
+    }
+
+    form.addEventListener('input', handleMacroInput);
+});
+</script>
+{% endblock %}

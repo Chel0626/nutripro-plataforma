@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="p-5 mb-4 bg-light rounded-3 shadow-sm">
+        <div class="container-fluid py-3">
+            <h1 class="display-5 fw-bold">Bem-vindo(a) à NutriPlatform!</h1>
+            <p class="col-md-10 fs-4">Sua ferramenta completa para gerenciamento nutricional.</p>
+            <a href="{{ url_for('listar_pacientes') }}" class="btn btn-primary btn-lg me-2" type="button"><i class="fas fa-users me-2"></i>Gerenciar Pacientes</a>
+            <a href="{{ url_for('listar_consultas') }}" class="btn btn-info btn-lg" type="button"><i class="fas fa-calendar-alt me-2"></i>Ver Consultas</a>
+        </div>
+    </div>
+
+    <div class="row align-items-md-stretch">
+        <div class="col-md-6 mb-4">
+            <div class="h-100 p-4 text-white bg-primary rounded-3 shadow">
+                <h2><i class="fas fa-users me-2"></i>Pacientes Ativos</h2>
+                <p class="fs-4">Atualmente você possui <strong>{{ total_pacientes }}</strong> paciente(s) em sua base.</p>
+                <a href="{{ url_for('novo_paciente') }}" class="btn btn-outline-light" type="button"><i class="fas fa-user-plus me-2"></i>Adicionar Novo Paciente</a>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="h-100 p-4 bg-white border rounded-3 shadow-sm">
+                <h2><i class="fas fa-calendar-check me-2"></i>Próximas Consultas Agendadas</h2>
+                {% if proximas_consultas %}
+                    <ul class="list-group list-group-flush">
+                        {% for consulta in proximas_consultas %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{{ url_for('detalhe_consulta', consulta_id=consulta.id) }}">{{ consulta.paciente.nome_completo }}</a>
+                                <small class="d-block text-muted">{{ consulta.data_hora.strftime('%d/%m/%Y às %H:%M') }}</small>
+                            </div>
+                            <span class="badge bg-info rounded-pill">{{ consulta.tipo_consulta if consulta.tipo_consulta else "Consulta" }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">Nenhuma consulta agendada para os próximos dias.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+             <div class="p-4 bg-light border rounded-3 shadow-sm">
+                <h2><i class="fas fa-tasks me-2"></i>Próximos Passos da Plataforma</h2>
+                <p>Estamos trabalhando para trazer mais funcionalidades para você:</p>
+                <ul>
+                    <li>Módulo de Criação de Planos Alimentares personalizados.</li>
+                    <li>Integração com Google Agenda para agendamentos.</li>
+                    <li>E muito mais para otimizar seu atendimento!</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

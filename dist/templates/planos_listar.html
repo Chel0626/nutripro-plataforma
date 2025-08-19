@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-file-alt me-2"></i>{{ titulo }}</h1>
+        </div>
+
+    {% if planos.items %}
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Título do Plano</th>
+                    <th>Paciente</th>
+                    <th>Data de Início</th>
+                    <th>Data de Término</th>
+                    <th>Criado em</th>
+                    <th class="text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plano in planos.items %}
+                <tr>
+                    <td><a href="{{ url_for('detalhe_plano_alimentar', plano_id=plano.id) }}">{{ plano.titulo }}</a></td>
+                    <td><a href="{{ url_for('detalhe_paciente', paciente_id=plano.paciente_plano.id) }}">{{ plano.paciente_plano.nome_completo }}</a></td>
+                    <td>{{ plano.data_inicio.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ plano.data_fim.strftime('%d/%m/%Y') if plano.data_fim else '-' }}</td>
+                    <td>{{ plano.data_criacao.strftime('%d/%m/%Y') }}</td>
+                    <td class="text-center">
+                        <a href="{{ url_for('detalhe_plano_alimentar', plano_id=plano.id) }}" class="btn btn-info btn-sm me-1" title="Ver Detalhes"><i class="fas fa-eye"></i></a>
+                        <a href="{{ url_for('editar_plano_alimentar', plano_id=plano.id) }}" class="btn btn-warning btn-sm me-1" title="Editar Plano"><i class="fas fa-edit"></i></a>
+                        <form action="{{ url_for('excluir_plano_alimentar', plano_id=plano.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir o plano \'{{ plano.titulo }}\'?');">
+                            <button type="submit" class="btn btn-danger btn-sm" title="Excluir Plano"><i class="fas fa-trash-alt"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if planos.pages > 1 %}
+    <nav aria-label="Paginação de planos alimentares" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not planos.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('listar_planos_alimentares', page=planos.prev_num) if planos.has_prev else '#' }}">Anterior</a>
+            </li>
+            {% for page_num in planos.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if planos.page == page_num %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('listar_planos_alimentares', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}<li class="page-item disabled"><span class="page-link">...</span></li>{% endif %}
+            {% endfor %}
+            <li class="page-item {% if not planos.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('listar_planos_alimentares', page=planos.next_num) if planos.has_next else '#' }}">Próxima</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle me-2"></i>Nenhum plano alimentar encontrado.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

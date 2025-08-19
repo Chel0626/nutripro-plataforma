@@ -1,0 +1,39 @@
+{
+  "id": 3,
+  "paciente_id": 4,
+  "nome_plano": "Plano de 2460 kcal",
+  "objetivo_calorico_final": 2460,
+  "orientacoes_diabetes": null,
+  "orientacoes_nutricao": null,
+  "data_criacao": "2025-08-19T12:55:35.182176",
+  "refeicoes": [
+    {
+      "id": 1,
+      "nome_refeicao": "Refeição Grande 1",
+      "meta_carboidratos_g": 194.0,
+      "meta_proteinas_g": 86.0,
+      "meta_gorduras_g": 67.0,
+      "itens": [
+        {
+          "id": 1,
+          "nome_alimento": "Arroz carreteiro",
+          "marca_alimento": "TACO",
+          "quantidade_g": 100.0,
+          "medida_caseira": "",
+          "carboidratos_g": 11.6,
+          "proteinas_g": 10.8,
+          "gorduras_g": 7.1,
+          "kcal": 154
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nome_refeicao": "Refeição Pequena 1",
+      "meta_carboidratos_g": 83.0,
+      "meta_proteinas_g": 37.0,
+      "meta_gorduras_g": 29.0,
+      "itens": []
+    }
+  ]
+}

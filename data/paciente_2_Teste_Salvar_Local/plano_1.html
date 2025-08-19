@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Plano de Teste Local</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11pt;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #FFFFFF; 
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #5A6650;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+        .header-text h2 { margin: 0; font-size: 18pt; }
+        .header-text p { margin: 5px 0 0; font-size: 12pt; color: #555; }
+        .header-logo { width: 40mm; height: auto; }
+
+        .patient-info {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #DDE2D3;
+            border-radius: 5px;
+        }
+
+        .orientacoes-gerais {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .orientacoes-gerais .orientacao-box {
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #fdfaf9;
+            border-left: 4px solid #5A6650;
+        }
+        .orientacoes-gerais h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #5A6650;
+            font-size: 14pt;
+        }
+        .orientacoes-gerais p {
+            margin-bottom: 0;
+            white-space: pre-wrap;
+        }
+
+        .meal-group {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .meal-group h3 {
+            background-color: #5A6650;
+            color: #FFFFFF;
+            padding: 10px 15px;
+            border-radius: 5px 5px 0 0;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-size: 14pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #FFFFFF;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            border-top: none;
+            padding: 12px 15px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #ccc; }
+        td { border-top: 1px solid #ddd; }
+
+        .footer {
+            position: fixed;
+            bottom: -1.5cm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="footer">
+        Prescrição gerada pela Plataforma NutriPro em 19/08/2025
+    </div>
+
+    <div class="header">
+        <div class="header-text">
+            <h2>Carolina Macedo</h2>
+            <p>Nutricionista • Educadora em Diabetes</p>
+        </div>
+        <img class="header-logo" src="http://localhost/static/img/logo.jpg">
+    </div>
+
+    <div class="patient-info">
+        <strong>Paciente:</strong> Teste Salvar Local<br>
+        <strong>Data do Plano:</strong> 19/08/2025<br>
+        <strong>Objetivo Calórico:</strong> ~1800 kcal
+    </div>
+
+    
+    <div class="orientacoes-gerais">
+        
+        <div class="orientacao-box">
+            <h3>Educação em Diabetes</h3>
+            <p>Nenhuma</p>
+        </div>
+        
+        
+        <div class="orientacao-box">
+            <h3>Orientações de Nutrição</h3>
+            <p>Teste</p>
+        </div>
+        
+    </div>
+    
+
+    
+
+</body>
+</html>

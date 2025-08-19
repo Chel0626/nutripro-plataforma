@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">{{ titulo }}</h1>
+        <img src="https://platform.fatsecret.com/api/static/images/powered_by_fatsecret.svg" height="32">
+    </div>
+
+    <div class="card card-body mb-4">
+        <form method="POST">
+            <div class="input-group">
+                <input type="text" name="alimento_busca" class="form-control form-control-lg" placeholder="Digite o nome de um alimento ou produto..." value="{{ termo_busca }}">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if resultados %}
+    <h3 class="mb-3">Resultados para "{{ termo_busca }}"</h3>
+    <div class="list-group">
+        {% for alimento in resultados %}
+        <div class="list-group-item list-group-item-action d-flex gap-3 py-3">
+            <div class="d-flex gap-2 w-100 justify-content-between">
+                <div>
+                    <h6 class="mb-0">{{ alimento.nome }}</h6>
+                    <p class="mb-1 opacity-75">{{ alimento.marca }} ({{ alimento.tipo }})</p>
+                    <small class="text-muted">
+                        {{ alimento.descricao_completa }}
+                    </small>
+                </div>
+                 </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

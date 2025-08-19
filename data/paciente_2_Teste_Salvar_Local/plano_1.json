@@ -1,0 +1,10 @@
+{
+  "id": 1,
+  "paciente_id": 2,
+  "nome_plano": "Plano de Teste Local",
+  "objetivo_calorico_final": 1800,
+  "orientacoes_diabetes": "Nenhuma",
+  "orientacoes_nutricao": "Teste",
+  "data_criacao": "2025-08-19T12:52:40.611708",
+  "refeicoes": []
+}

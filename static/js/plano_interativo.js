@@ -143,7 +143,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!query.length || query.length < 2) return callback();
                 fetch(`/api/alimentos/autocomplete?q=${encodeURIComponent(query)}`)
                     .then(response => response.json())
-                    .then(json => callback(json))
+                    .then(json => {
+                        // Normaliza o formato esperado pelo TomSelect: cada option precisa de value/text
+                        // e o código existente espera `dados_completos` dentro da opção.
+                        const mapped = (json || []).map(item => ({
+                            value: item.value || item.nome,
+                            text: item.text || item.nome || item.value,
+                            dados_completos: item
+                        }));
+                        callback(mapped);
+                    })
                     .catch(() => callback());
             },
             onChange: function(value) {
@@ -156,13 +165,16 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             render: {
                 option: function(data, escape) {
-                    const macros = data.dados_completos;
+                    const macros = data.dados_completos || data || {};
+                    const carb = Number.isFinite(Number(macros.carboidratos_100g)) ? Number(macros.carboidratos_100g) : 0;
+                    const prot = Number.isFinite(Number(macros.proteinas_100g)) ? Number(macros.proteinas_100g) : 0;
+                    const gord = Number.isFinite(Number(macros.gorduras_100g)) ? Number(macros.gorduras_100g) : 0;
                     return `<div class="d-flex justify-content-between">
-                                <div>${escape(data.text)}</div>
-                                <div class="text-muted small ms-4 text-nowrap">
-                                    C: ${macros.carboidratos_100g.toFixed(1)}g | P: ${macros.proteinas_100g.toFixed(1)}g | G: ${macros.gorduras_100g.toFixed(1)}g
-                                </div>
-                            </div>`;
+                                    <div>${escape(data.text)}</div>
+                                    <div class="text-muted small ms-4 text-nowrap">
+                                        C: ${carb.toFixed(1)}g | P: ${prot.toFixed(1)}g | G: ${gord.toFixed(1)}g
+                                    </div>
+                                </div>`;
                 },
                 no_results: function(data, escape) { return '<div class="no-results">Nenhum alimento encontrado.</div>'; },
             },
@@ -335,7 +347,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Preenche a idade se a data de nascimento estiver disponível
     const idadeInput = document.getElementById('calc-idade');
     const pacienteDataNascimento = '{{ paciente.data_nascimento.strftime("%Y-%m-%d") if paciente.data_nascimento else "" }}';
-    if(idadeInput && pacienteDataNascimento) {
-        idadeInput.value = calculateAge(pacienteDataNascimento);
+    if (idadeInput) {
+        if (pacienteDataNascimento) {
+            const ageVal = calculateAge(pacienteDataNascimento);
+            if (Number.isFinite(ageVal)) {
+                idadeInput.value = ageVal;
+            } else {
+                idadeInput.value = '';
+            }
+        } else {
+            idadeInput.value = '';
+        }
     }
 });

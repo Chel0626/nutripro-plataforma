@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "_form_helpers.html" import render_field, render_submit_field %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        {# Coluna do Formulário #}
+        <div class="col-lg-7">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-calculator me-2"></i>{{ titulo }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                {{ render_field(form.peso, class="form-control") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ render_field(form.altura, class="form-control") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ render_field(form.idade, class="form-control") }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ render_field(form.sexo, class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ render_field(form.nivel_atividade, class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ render_field(form.objetivo, class="form-select") }}
+                        </div>
+                        <div class="d-grid mt-4">
+                            {{ render_submit_field(form.submit, class="btn-primary btn-lg") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# Coluna dos Resultados #}
+        <div class="col-lg-5">
+            {% if resultado %}
+            <div class="card shadow-lg border-success">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resultado do Cálculo</h4>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <div class="mb-4">
+                        <h5 class="text-muted">Taxa Metabólica Basal (TMB)</h5>
+                        <p class="display-5 fw-bold text-success">{{ resultado.tmb }} kcal/dia</p>
+                        <small class="text-muted">Calorias que seu corpo queima em repouso.</small>
+                    </div>
+                    <hr>
+                    <div class="my-4">
+                        <h5 class="text-muted">Calorias para Manutenção</h5>
+                        <p class="display-5 fw-bold text-success">{{ resultado.calorias_manutencao }} kcal/dia</p>
+                        <small class="text-muted">Calorias para manter seu peso atual com seu nível de atividade.</small>
+                    </div>
+                    <hr>
+                    <div class="mt-4">
+                        <h5 class="text-primary">Necessidade Calórica para seu Objetivo</h5>
+                        <p class="display-4 fw-bolder text-primary">{{ resultado.calorias_objetivo }} kcal/dia</p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-lg bg-light">
+                <div class="card-body p-5 text-center">
+                    <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">Aguardando cálculo</h4>
+                    <p class="text-muted">Preencha os dados no formulário ao lado e clique em "Calcular" para ver os resultados aqui.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

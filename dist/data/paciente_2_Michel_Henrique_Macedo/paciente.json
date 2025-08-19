@@ -1,0 +1,10 @@
+{
+  "id": 2,
+  "nome_completo": "Michel Henrique Macedo",
+  "email": "michelhm91@gmail.com",
+  "telefone": "19996274105",
+  "data_nascimento": "1991-07-14",
+  "peso": 86.0,
+  "altura_cm": 175,
+  "sexo": "masculino"
+}

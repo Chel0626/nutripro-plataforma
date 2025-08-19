@@ -1,0 +1,22 @@
+{
+  "resultado": {
+    "macros_gramas": {
+      "carboidrato": 270,
+      "gordura": 93,
+      "proteina": 120
+    },
+    "num_refeicoes_grandes": 3,
+    "num_refeicoes_pequenas": 3,
+    "por_refeicao_grande": {
+      "carboidrato": 63,
+      "gordura": 22,
+      "proteina": 28
+    },
+    "por_refeicao_pequena": {
+      "carboidrato": 27,
+      "gordura": 9,
+      "proteina": 12
+    }
+  },
+  "sucesso": true
+}
