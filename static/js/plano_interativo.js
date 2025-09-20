@@ -36,6 +36,13 @@ document.addEventListener('DOMContentLoaded', function() {
     refeicoesContainer.addEventListener('change', handleMudancaEmRefeicao);
     refeicoesContainer.addEventListener('click', handleRemoverItem);
     
+    // Add event listener for the "Prosseguir para Prescrição" button
+    document.addEventListener('click', function(event) {
+        if (event.target.id === 'btn-prosseguir-prescricao') {
+            handleProsseguirPrescricao();
+        }
+    });
+    
     // --- FUNÇÕES DE LÓGICA DE EVENTOS ---
     function handleCalcularCalorias(event) {
         event.preventDefault();
@@ -84,7 +91,47 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify(dados)
         })
         .then(response => response.json())
-        .then(data => data.sucesso ? renderizarRefeicoes(data.resultado) : alert('Erro: ' + data.erro));
+        .then(data => {
+            if (data.sucesso) {
+                mostrarResultadosDistribuicao(data.resultado);
+            } else {
+                alert('Erro: ' + data.erro);
+            }
+        });
+    }
+
+    function mostrarResultadosDistribuicao(resultado) {
+        // Store the distribution results for later use
+        window.ultimaDistribuicao = resultado;
+        
+        // Update the display with the calculated values
+        document.getElementById('total-carb-display').textContent = resultado.macros_gramas.carboidrato.toFixed(1);
+        document.getElementById('total-prot-display').textContent = resultado.macros_gramas.proteina.toFixed(1);
+        document.getElementById('total-gord-display').textContent = resultado.macros_gramas.gordura.toFixed(1);
+        
+        document.getElementById('num-grandes-display').textContent = resultado.num_refeicoes_grandes;
+        document.getElementById('carb-refeicao-grande').textContent = resultado.por_refeicao_grande.carboidrato.toFixed(1);
+        document.getElementById('prot-refeicao-grande').textContent = resultado.por_refeicao_grande.proteina.toFixed(1);
+        document.getElementById('gord-refeicao-grande').textContent = resultado.por_refeicao_grande.gordura.toFixed(1);
+        
+        document.getElementById('num-pequenas-display').textContent = resultado.num_refeicoes_pequenas;
+        document.getElementById('carb-refeicao-pequena').textContent = resultado.por_refeicao_pequena.carboidrato.toFixed(1);
+        document.getElementById('prot-refeicao-pequena').textContent = resultado.por_refeicao_pequena.proteina.toFixed(1);
+        document.getElementById('gord-refeicao-pequena').textContent = resultado.por_refeicao_pequena.gordura.toFixed(1);
+        
+        // Show the results section
+        document.getElementById('distribuicao-resultados').style.display = 'block';
+        
+        // Scroll to the results section
+        document.getElementById('distribuicao-resultados').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function handleProsseguirPrescricao() {
+        if (window.ultimaDistribuicao) {
+            renderizarRefeicoes(window.ultimaDistribuicao);
+        } else {
+            alert('Por favor, calcule a distribuição de macros primeiro.');
+        }
     }
 
     function handleMudancaEmRefeicao(event) {
