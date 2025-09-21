@@ -1,19 +1,56 @@
-# Ambiente Virtual
-venv/
-.venv/
+# .gitignore para NutriPro
 
-# Arquivos de Cache do Python
-__pycache__/
-*.pyc
+# Variáveis de ambiente e configurações sensíveis
+.env
+credentials.json
+token.json
 
-# Banco de Dados
-# Vamos ignorar o banco de dados para que cada desenvolvedor
-# tenha o seu próprio e não sobreescrever o de outros.
-# Opcional: Se quiser fazer backup do schema, mas não dos dados.
+# Banco de dados local
+instance/
+*.db
+*.sqlite
+*.sqlite3
 plataforma_nutri.db
 
-# Arquivos do sistema
-.DS_Store
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Arquivos do VS Code
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+.tmp/
+temp/
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dados de usuário (manter backup separado)
+data/
+uploads/
+
+# Flask
+flask_session/

@@ -6,6 +6,14 @@
 <div class="container mt-2">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="fas fa-calendar-alt me-2"></i>{{ titulo }}</h1>
+        <div>
+            <a href="{{ url_for('configurar_google_calendar') }}" class="btn btn-info me-2">
+                <i class="fab fa-google me-2"></i>Google Calendar
+            </a>
+            <a href="{{ url_for('consultas_nao_associadas') }}" class="btn btn-warning me-2">
+                <i class="fas fa-exclamation-triangle me-2"></i>Não Associadas
+            </a>
+        </div>
         </div>
 
     {% if consultas.items %}

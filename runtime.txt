@@ -1,0 +1,2 @@
+# runtime.txt - Especifica a versão do Python para deploy
+python-3.11.5

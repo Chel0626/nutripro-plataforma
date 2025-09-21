@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Cabeçalho -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-1">
+                                <i class="fas fa-video me-2"></i>
+                                Dashboard Google Meet
+                            </h3>
+                            <p class="mb-0">Painel de controle das videoconferências</p>
+                        </div>
+                        <div class="text-end">
+                            <a href="{{ url_for('criar_consulta_com_meet') }}" class="btn btn-light">
+                                <i class="fas fa-plus me-1"></i>
+                                Nova Consulta
+                            </a>
+                            <a href="{{ url_for('proximas_consultas_meet') }}" class="btn btn-light">
+                                <i class="fas fa-list me-1"></i>
+                                Ver Todas
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-calendar-alt text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 mb-1">{{ stats.total_consultas or 0 }}</h3>
+                    <p class="text-muted mb-0">Total de Consultas</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-video text-success" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 mb-1">{{ stats.consultas_com_meet or 0 }}</h3>
+                    <p class="text-muted mb-0">Com Google Meet</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-percentage text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 mb-1">{{ stats.percentual_meet or 0 }}%</h3>
+                    <p class="text-muted mb-0">Taxa de Adoção</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-clock text-info" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2 mb-1">{{ stats.proximas_30_dias or 0 }}</h3>
+                    <p class="text-muted mb-0">Próximos 30 Dias</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico de Progresso -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Distribuição de Consultas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Com Google Meet</span>
+                            <span>{{ stats.consultas_com_meet or 0 }}</span>
+                        </div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-success" style="width: {{ stats.percentual_meet or 0 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Sem Google Meet</span>
+                            <span>{{ stats.consultas_sem_meet or 0 }}</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-secondary" style="width: {{ 100 - (stats.percentual_meet or 0) }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-calendar-check me-2"></i>
+                        Próximas Consultas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Com Meet Configurado</span>
+                            <span>{{ stats.proximas_com_meet or 0 }}</span>
+                        </div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-primary" style="width: {{ stats.meet_coverage_futuro or 0 }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <h4 class="text-primary">{{ stats.meet_coverage_futuro or 0 }}%</h4>
+                        <p class="text-muted mb-0">Cobertura Futura</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Consultas Próximas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Próximas Consultas com Google Meet
+                    </h6>
+                    <a href="{{ url_for('proximas_consultas_meet') }}" class="btn btn-sm btn-outline-primary">
+                        Ver Todas
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if consultas_proximas %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Data/Hora</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for consulta in consultas_proximas[:5] %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ consulta.paciente_nome }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ consulta.paciente_email }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ consulta.data_consulta.strftime('%d/%m/%Y') }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ consulta.data_consulta.strftime('%H:%M') }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if consulta.status == 'agendada' else 'warning' }}">
+                                            {{ consulta.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ consulta.meet_link }}" target="_blank" 
+                                               class="btn btn-sm btn-success" title="Entrar no Meet">
+                                                <i class="fas fa-video"></i>
+                                            </a>
+                                            <a href="{{ url_for('consulta_detalhe', consulta_id=consulta.consulta_id) }}" 
+                                               class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    onclick="copiarLink('{{ consulta.meet_link }}')" title="Copiar Link">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times text-muted" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-3">Nenhuma consulta agendada</h6>
+                        <p class="text-muted">Não há consultas com Google Meet nos próximos 7 dias.</p>
+                        <a href="{{ url_for('criar_consulta_com_meet') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            Agendar Consulta
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dicas e Informações -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Dicas para Videoconferências
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Teste o link 5 minutos antes</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Use fones de ouvido para melhor áudio</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Certifique-se de boa iluminação</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Tenha um plano B (telefone)</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Grave consultas importantes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Recursos Disponíveis
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-video text-primary me-2"></i>Videoconferência HD</li>
+                        <li><i class="fas fa-microphone text-primary me-2"></i>Áudio de alta qualidade</li>
+                        <li><i class="fas fa-desktop text-primary me-2"></i>Compartilhamento de tela</li>
+                        <li><i class="fas fa-comments text-primary me-2"></i>Chat integrado</li>
+                        <li><i class="fas fa-record-vinyl text-primary me-2"></i>Gravação de reuniões</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copiarLink(link) {
+    navigator.clipboard.writeText(link).then(function() {
+        // Feedback visual
+        const button = event.target.closest('button');
+        const icon = button.querySelector('i');
+        icon.className = 'fas fa-check';
+        button.classList.add('btn-success');
+        button.classList.remove('btn-outline-secondary');
+        
+        setTimeout(function() {
+            icon.className = 'fas fa-copy';
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    });
+}
+
+// Atualizar estatísticas a cada 2 minutos
+setInterval(function() {
+    fetch('/api/meet/statistics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Atualizar números sem recarregar a página
+                location.reload();
+            }
+        });
+}, 2 * 60 * 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <!-- Header do Dia -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-1">
+                                <i class="fas fa-sun me-2"></i>
+                                Bom dia, Dra! 👋
+                            </h2>
+                            <p class="mb-0 fs-5">
+                                <i class="fas fa-calendar-day me-2"></i>
+                                {{ overview.data.strftime('%A, %d de %B de %Y')|title }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex justify-content-end gap-3">
+                                <div class="text-center">
+                                    <h3 class="mb-0">{{ overview.total_consultas }}</h3>
+                                    <small>Consultas Hoje</small>
+                                </div>
+                                <div class="text-center">
+                                    <h3 class="mb-0">{{ overview.stats.consultas_restantes }}</h3>
+                                    <small>Restantes</small>
+                                </div>
+                                <div class="text-center">
+                                    <h3 class="mb-0">{{ overview.stats.taxa_meet }}%</h3>
+                                    <small>Com Meet</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Consultas Principais (70%) -->
+        <div class="col-lg-8">
+            
+            <!-- Próxima Consulta (Destaque) -->
+            {% if overview.proximas %}
+            <div class="card border-success mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-play-circle me-2"></i>
+                        Próxima Consulta
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set proxima = overview.proximas[0] %}
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <div class="avatar-circle bg-primary text-white">
+                                {{ proxima.paciente.avatar }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-1">{{ proxima.paciente.nome }}</h5>
+                            <p class="mb-1 text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ proxima.data_consulta.strftime('%H:%M') }}
+                            </p>
+                            <p class="mb-0">
+                                <i class="fas fa-envelope me-1"></i>
+                                {{ proxima.paciente.email }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <!-- Status do Tempo -->
+                            <div class="mb-2">
+                                {% if proxima.timing.status_tempo == 'agora' %}
+                                    <span class="badge bg-warning fs-6">
+                                        <i class="fas fa-bell me-1"></i>AGORA
+                                    </span>
+                                {% elif proxima.timing.status_tempo == 'iminente' %}
+                                    <span class="badge bg-info fs-6">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ proxima.timing.tempo_restante_minutos }} min
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        em {{ proxima.timing.tempo_restante_minutos }} min
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Botões de Ação -->
+                            <div class="d-flex gap-2 justify-content-end">
+                                {% if proxima.tools.tem_meet %}
+                                    <a href="{{ proxima.tools.sala_url }}" class="btn btn-success">
+                                        <i class="fas fa-video me-1"></i>
+                                        Entrar na Sala
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            onclick="criarMeet('{{ proxima.consulta_id }}')">
+                                        <i class="fas fa-plus me-1"></i>Criar Meet
+                                    </button>
+                                {% endif %}
+                                <a href="{{ url_for('consulta_detalhe', consulta_id=proxima.consulta_id) }}" 
+                                   class="btn btn-outline-secondary">
+                                    <i class="fas fa-eye me-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Lista de Consultas do Dia -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Agenda de Hoje
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="sincronizarAgenda()">
+                            <i class="fas fa-sync me-1"></i>Sincronizar
+                        </button>
+                        <a href="{{ url_for('criar_consulta_com_meet') }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i>Nova
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if overview.total_consultas > 0 %}
+                    <div class="timeline">
+                        <!-- Em Andamento -->
+                        {% for consulta in overview.em_andamento %}
+                        <div class="timeline-item status-em-andamento">
+                            <div class="timeline-marker bg-warning">
+                                <i class="fas fa-play"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ consulta.paciente.nome }}</h6>
+                                        <p class="mb-1 text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ consulta.data_consulta.strftime('%H:%M') }}
+                                            <span class="badge bg-warning ms-2">EM ANDAMENTO</span>
+                                        </p>
+                                    </div>
+                                    <div class="consultation-actions">
+                                        <a href="{{ consulta.tools.sala_url }}" class="btn btn-warning btn-sm">
+                                            <i class="fas fa-video me-1"></i>Continuar
+                                        </a>
+                                        <button class="btn btn-success btn-sm" 
+                                                onclick="finalizarConsulta('{{ consulta.consulta_id }}')">
+                                            <i class="fas fa-check me-1"></i>Finalizar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Atrasadas -->
+                        {% for consulta in overview.atrasadas %}
+                        <div class="timeline-item status-atrasada">
+                            <div class="timeline-marker bg-danger">
+                                <i class="fas fa-exclamation"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ consulta.paciente.nome }}</h6>
+                                        <p class="mb-1 text-danger">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ consulta.data_consulta.strftime('%H:%M') }}
+                                            <span class="badge bg-danger ms-2">ATRASADA</span>
+                                        </p>
+                                    </div>
+                                    <div class="consultation-actions">
+                                        <a href="{{ consulta.tools.sala_url }}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-video me-1"></i>Iniciar Agora
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Próximas -->
+                        {% for consulta in overview.proximas[1:] %}
+                        <div class="timeline-item status-proxima">
+                            <div class="timeline-marker bg-primary">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ consulta.paciente.nome }}</h6>
+                                        <p class="mb-1 text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ consulta.data_consulta.strftime('%H:%M') }}
+                                            {% if consulta.timing.status_tempo == 'iminente' %}
+                                                <span class="badge bg-info ms-2">EM {{ consulta.timing.tempo_restante_minutos }} MIN</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div class="consultation-actions">
+                                        {% if consulta.timing.pode_iniciar %}
+                                            <a href="{{ consulta.tools.sala_url }}" class="btn btn-success btn-sm">
+                                                <i class="fas fa-video me-1"></i>Iniciar
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('consulta_detalhe', consulta_id=consulta.consulta_id) }}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye me-1"></i>Ver
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Finalizadas -->
+                        {% for consulta in overview.finalizadas %}
+                        <div class="timeline-item status-finalizada">
+                            <div class="timeline-marker bg-success">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ consulta.paciente.nome }}</h6>
+                                        <p class="mb-1 text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ consulta.data_consulta.strftime('%H:%M') }}
+                                            <span class="badge bg-success ms-2">FINALIZADA</span>
+                                        </p>
+                                    </div>
+                                    <div class="consultation-actions">
+                                        <a href="{{ url_for('consulta_detalhe', consulta_id=consulta.consulta_id) }}" 
+                                           class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-file-medical me-1"></i>Relatório
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- Dia sem consultas -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-calendar-check text-muted" style="font-size: 4rem;"></i>
+                        <h5 class="text-muted mt-3">Nenhuma consulta agendada hoje</h5>
+                        <p class="text-muted">Aproveite para organizar ou agendar novas consultas.</p>
+                        <a href="{{ url_for('criar_consulta_com_meet') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Agendar Consulta
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (30%) -->
+        <div class="col-lg-4">
+            <!-- Stats Rápidas -->
+            <div class="row mb-4">
+                <div class="col-6">
+                    <div class="card text-center bg-light">
+                        <div class="card-body py-3">
+                            <h4 class="text-success mb-1">{{ overview.stats.taxa_finalizacao }}%</h4>
+                            <small class="text-muted">Finalizadas</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card text-center bg-light">
+                        <div class="card-body py-3">
+                            <h4 class="text-primary mb-1">R$ {{ overview.receita_estimada }}</h4>
+                            <small class="text-muted">Receita Est.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Próximas 3 Horas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Próximas 3 Horas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if proximas_horas %}
+                        {% for consulta in proximas_horas[:3] %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="avatar-sm bg-primary text-white me-3">
+                                {{ consulta.paciente.avatar }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0">{{ consulta.paciente.nome }}</h6>
+                                <small class="text-muted">{{ consulta.data_consulta.strftime('%H:%M') }}</small>
+                            </div>
+                            {% if consulta.tools.tem_meet %}
+                                <i class="fas fa-video text-success"></i>
+                            {% else %}
+                                <i class="fas fa-video-slash text-muted"></i>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted mb-0">Nenhuma consulta nas próximas 3 horas.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ações Rápidas -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Ações Rápidas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('criar_consulta_com_meet') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-2"></i>Nova Consulta com Meet
+                        </a>
+                        <a href="{{ url_for('listar_pacientes') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-users me-2"></i>Gerenciar Pacientes
+                        </a>
+                        <a href="{{ url_for('configurar_google_calendar') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-sync me-2"></i>Sincronizar Agenda
+                        </a>
+                        <a href="{{ url_for('dashboard_meet') }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-chart-bar me-2"></i>Dashboard Meet
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modais e Componentes -->
+<div class="modal fade" id="modalFinalizarConsulta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Finalizar Consulta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Observações da Consulta</label>
+                    <textarea class="form-control" id="observacoesFinalizacao" rows="3" 
+                              placeholder="Resumo da consulta, recomendações, próximos passos..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarFinalizacao()">
+                    <i class="fas fa-check me-1"></i>Finalizar Consulta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.avatar-sm {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.timeline {
+    position: relative;
+    padding: 0;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 1rem 0 1rem 3rem;
+    border-left: 2px solid #e9ecef;
+}
+
+.timeline-item:last-child {
+    border-left: none;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -9px;
+    top: 1rem;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: white;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-left: 0.5rem;
+}
+
+.consultation-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.status-em-andamento .timeline-content {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.status-atrasada .timeline-content {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.status-finalizada .timeline-content {
+    background: #d1eddf;
+    border-left: 4px solid #198754;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+@media (max-width: 768px) {
+    .consultation-actions {
+        flex-direction: column;
+    }
+    
+    .timeline-content {
+        margin-left: 0;
+    }
+}
+</style>
+
+<script>
+let consultaParaFinalizar = null;
+
+function criarMeet(consultaId) {
+    if (confirm('Criar Google Meet para esta consulta?')) {
+        fetch(`/consultas/${consultaId}/adicionar-meet`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Erro ao criar Google Meet');
+            }
+        });
+    }
+}
+
+function finalizarConsulta(consultaId) {
+    consultaParaFinalizar = consultaId;
+    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarConsulta'));
+    modal.show();
+}
+
+function confirmarFinalizacao() {
+    const observacoes = document.getElementById('observacoesFinalizacao').value;
+    
+    fetch(`/api/consultas/${consultaParaFinalizar}/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: 'finalizada',
+            observacoes: observacoes
+        })
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Erro ao finalizar consulta');
+        }
+    });
+}
+
+function sincronizarAgenda() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spin fa-spinner me-1"></i>Sincronizando...';
+    btn.disabled = true;
+    
+    fetch('/consultas/sincronizar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'calendar_id=primary&days_ahead=1&days_behind=0'
+    }).then(response => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        if (response.ok) {
+            location.reload();
+        }
+    });
+}
+
+// Auto-refresh a cada 2 minutos para manter dados atualizados
+setInterval(() => {
+    location.reload();
+}, 2 * 60 * 1000);
+</script>
+{% endblock %}

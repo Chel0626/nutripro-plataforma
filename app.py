@@ -4,6 +4,10 @@ import sys
 import math
 import logging
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+# Carrega variáveis de ambiente
+load_dotenv()
 
 # Importa DADOS_TACO se disponível; em falta, usa lista vazia e registra warning.
 logger = logging.getLogger(__name__)
@@ -25,26 +29,40 @@ from wtforms import (DateField, FieldList, FloatField, FormField, IntegerField,
 from wtforms.fields import DateTimeLocalField
 from wtforms.validators import DataRequired, Email as EmailValidator, NumberRange, Optional
 
+# Importações para Google Calendar
+from calendar_sync_service import CalendarSyncService
+# Importações para Google Meet
+from google_meet_service import GoogleMeetService
+# Importações para Dashboard
+from dashboard_service import DashboardService
+
 app = Flask(__name__)
 
 # --- CONFIGURAÇÕES GERAIS DO APP ---
-# Ler configurações sensíveis de env vars, manter defaults para dev
+# Configuração para produção e desenvolvimento
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'uma-chave-secreta-muito-segura')
 
-# Banco padrão em ./instance/plataforma_nutri.db, pode ser sobrescrito por APP_DB_URI
-project_root = os.path.dirname(os.path.abspath(__file__))
-# Quando empacotado pelo PyInstaller, preferir criar/usar a pasta 'instance' no CWD
-# para que o banco seja persistente localmente ao lado do executável.
-if getattr(sys, '_MEIPASS', False):
-    instance_dir = os.path.join(os.getcwd(), 'instance')
+# Configuração do banco de dados
+# Em produção, usar DATABASE_URL; em desenvolvimento, usar SQLite local
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Ajuste para Heroku/Railway que pode fornecer postgres:// em vez de postgresql://
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
-    instance_dir = os.path.join(project_root, 'instance')
-# Permite sobrescrever via variável de ambiente APP_INSTANCE_DIR
-instance_dir = os.environ.get('APP_INSTANCE_DIR', instance_dir)
-os.makedirs(instance_dir, exist_ok=True)
-default_db_path = os.path.join(instance_dir, 'plataforma_nutri.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('APP_DB_URI', f'sqlite:///{default_db_path}')
-logger.info(f"Usando arquivo de banco de dados: {default_db_path}")
+    # Configuração local padrão
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, '_MEIPASS', False):
+        instance_dir = os.path.join(os.getcwd(), 'instance')
+    else:
+        instance_dir = os.path.join(project_root, 'instance')
+    instance_dir = os.environ.get('APP_INSTANCE_DIR', instance_dir)
+    os.makedirs(instance_dir, exist_ok=True)
+    default_db_path = os.path.join(instance_dir, 'plataforma_nutri.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{default_db_path}'
+    logger.info(f"Usando arquivo de banco de dados: {default_db_path}")
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Setup básico de logging se não houver handlers
@@ -52,6 +70,15 @@ if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.INFO)
 
 db = SQLAlchemy(app)
+
+# Configuração do serviço de sincronização com Google Calendar
+calendar_sync = CalendarSyncService(app, db)
+
+# Configuração do serviço de Google Meet
+meet_service = GoogleMeetService(app, db)
+
+# Configuração do serviço de Dashboard
+dashboard_service = DashboardService(app, db)
 
 # Diretório para salvar dados persistentes fora do executável (pasta visível ao usuário)
 # Quando empacotado (_MEIPASS), usamos o CWD/data por padrão para que o executável possa
@@ -229,8 +256,26 @@ class Consulta(db.Model):
     status = db.Column(db.String(50), nullable=False, default='Agendada')
     observacoes_nutri = db.Column(db.Text, nullable=True)
     link_videochamada = db.Column(db.String(255), nullable=True)
+    localizacao = db.Column(db.String(255), nullable=True)  # Endereço do consultório ou "Online"
+    
+    # Campos para controle de fluxo da consulta
+    data_inicio = db.Column(db.DateTime, nullable=True)  # Quando iniciou
+    data_finalizacao = db.Column(db.DateTime, nullable=True)  # Quando finalizou
+    observacoes = db.Column(db.Text, nullable=True)  # Observações da finalização
+    
+    # Campos para integração com Google Calendar
+    google_event_id = db.Column(db.String(255), nullable=True, unique=True)  # ID do evento no Google Calendar
+    google_calendar_id = db.Column(db.String(255), nullable=True)  # ID do calendário
+    sincronizado_em = db.Column(db.DateTime, nullable=True)  # Última sincronização
+    origem = db.Column(db.String(50), nullable=False, default='Manual')  # Manual, GoogleCalendar, Calendly
+    
+    # Dados do paciente vindos do Google Calendar (para matching)
+    email_paciente_gc = db.Column(db.String(255), nullable=True)  # Email do participante no evento
+    nome_paciente_gc = db.Column(db.String(255), nullable=True)  # Nome extraído do evento
+    telefone_paciente_gc = db.Column(db.String(20), nullable=True)  # Telefone se disponível
+    
     data_criacao = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=False)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('paciente.id'), nullable=True)  # Nullable para eventos não matchados
 
 class PlanoAlimentar(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -335,8 +380,25 @@ class DistribuicaoMacrosForm(FlaskForm):
 # --- ROTAS DA APLICAÇÃO ---
 @app.route('/')
 def home():
-    total_pacientes = Paciente.query.count()
-    return render_template('home_dashboard.html', titulo="Dashboard", total_pacientes=total_pacientes)
+    """Dashboard diário com foco no fluxo de trabalho do nutricionista."""
+    try:
+        # Obtém visão geral do dia atual
+        overview = dashboard_service.get_today_overview()
+        
+        # Obtém consultas das próximas 3 horas para sidebar
+        proximas_horas = dashboard_service.get_proximas_horas_overview(3)
+        
+        return render_template('dashboard_nutri.html', 
+                             titulo="Dashboard Diário",
+                             overview=overview,
+                             proximas_horas=proximas_horas)
+    except Exception as e:
+        logger.error(f"Erro no dashboard: {e}")
+        # Fallback para dashboard simples
+        total_pacientes = Paciente.query.count()
+        return render_template('home_dashboard.html', 
+                             titulo="Dashboard", 
+                             total_pacientes=total_pacientes)
 
 @app.route('/pacientes')
 def listar_pacientes():
@@ -399,6 +461,270 @@ def nova_consulta(pid):
         flash(f'Consulta agendada com sucesso!', 'success')
         return redirect(url_for('detalhe_paciente', paciente_id=pid))
     return render_template('consulta_formulario.html', titulo=f'Nova Consulta', form=form, paciente_id=pid)
+
+# === ROTAS PARA SINCRONIZAÇÃO COM GOOGLE CALENDAR ===
+
+@app.route('/consultas/sincronizar-google-calendar')
+def configurar_google_calendar():
+    """Página de configuração do Google Calendar"""
+    # Verifica se já existe autenticação
+    authenticated = calendar_sync.authenticate_calendar()
+    calendars = []
+    
+    if authenticated:
+        calendars = calendar_sync.get_available_calendars()
+    
+    return render_template('google_calendar_config.html', 
+                         titulo="Configuração Google Calendar",
+                         authenticated=authenticated,
+                         calendars=calendars)
+
+@app.route('/consultas/sincronizar', methods=['POST'])
+def sincronizar_consultas():
+    """Executa a sincronização das consultas"""
+    try:
+        calendar_id = request.form.get('calendar_id', 'primary')
+        days_ahead = int(request.form.get('days_ahead', 30))
+        days_behind = int(request.form.get('days_behind', 7))
+        
+        if not calendar_sync.authenticate_calendar():
+            flash('Erro na autenticação com Google Calendar. Configure as credenciais.', 'danger')
+            return redirect(url_for('configurar_google_calendar'))
+        
+        # Executa a sincronização
+        stats = calendar_sync.sync_calendar_events(calendar_id, days_ahead, days_behind)
+        
+        # Prepara mensagem de resultado
+        message = f"""
+        Sincronização concluída!
+        • Total de eventos encontrados: {stats['total_events']}
+        • Consultas de nutrição: {stats['nutrition_events']}
+        • Novas consultas criadas: {stats['new_consultations']}
+        • Consultas atualizadas: {stats['updated_consultations']}
+        • Pacientes identificados automaticamente: {stats['matched_patients']}
+        • Consultas sem paciente associado: {stats['unmatched_events']}
+        """
+        
+        flash(message, 'success')
+        
+        # Redireciona para lista de consultas com filtro de sincronizadas
+        return redirect(url_for('listar_consultas'))
+        
+    except Exception as e:
+        flash(f'Erro durante a sincronização: {str(e)}', 'danger')
+        return redirect(url_for('configurar_google_calendar'))
+
+@app.route('/consultas/nao-associadas')
+def consultas_nao_associadas():
+    """Lista consultas sincronizadas que não foram associadas a pacientes"""
+    consultas = calendar_sync.get_unmatched_consultations()
+    pacientes = Paciente.query.order_by(Paciente.nome_completo).all()
+    
+    return render_template('consultas_nao_associadas.html',
+                         titulo="Consultas Não Associadas",
+                         consultas=consultas,
+                         pacientes=pacientes)
+
+@app.route('/consultas/associar-paciente', methods=['POST'])
+def associar_consulta_paciente():
+    """Associa uma consulta não identificada a um paciente"""
+    try:
+        consultation_id = int(request.form.get('consultation_id'))
+        action = request.form.get('action')
+        
+        if action == 'associate':
+            patient_id = int(request.form.get('patient_id'))
+            success = calendar_sync.match_consultation_to_patient(consultation_id, patient_id)
+            
+            if success:
+                flash('Consulta associada ao paciente com sucesso!', 'success')
+            else:
+                flash('Erro ao associar consulta ao paciente.', 'danger')
+                
+        elif action == 'create_patient':
+            new_patient_id = calendar_sync.create_patient_from_consultation(consultation_id)
+            
+            if new_patient_id:
+                flash('Novo paciente criado e consulta associada com sucesso!', 'success')
+            else:
+                flash('Erro ao criar novo paciente a partir da consulta.', 'danger')
+        
+        return redirect(url_for('consultas_nao_associadas'))
+        
+    except Exception as e:
+        flash(f'Erro ao processar associação: {str(e)}', 'danger')
+        return redirect(url_for('consultas_nao_associadas'))
+
+@app.route('/api/google-calendar/test-connection')
+def test_google_calendar_connection():
+    """API para testar conexão com Google Calendar"""
+    try:
+        authenticated = calendar_sync.authenticate_calendar()
+        if authenticated:
+            calendars = calendar_sync.get_available_calendars()
+            return jsonify({
+                'success': True,
+                'message': 'Conexão estabelecida com sucesso',
+                'calendars_count': len(calendars)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Falha na autenticação'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro: {str(e)}'
+        })
+
+# === ROTAS DO GOOGLE MEET ===
+
+@app.route('/consultas/criar-com-meet', methods=['GET', 'POST'])
+def criar_consulta_com_meet():
+    """Cria uma nova consulta com Google Meet automático"""
+    if request.method == 'GET':
+        # Busca todos os pacientes para o formulário
+        pacientes = Paciente.query.order_by(Paciente.nome_completo).all()
+        return render_template('consulta_meet_form.html', 
+                             titulo="Nova Consulta com Google Meet",
+                             pacientes=pacientes)
+    
+    try:
+        # Processa dados do formulário
+        paciente_id = request.form.get('paciente_id')
+        data_str = request.form.get('data_consulta')
+        hora_str = request.form.get('hora_consulta')
+        duracao = int(request.form.get('duracao', 60))
+        observacoes = request.form.get('observacoes', '')
+        
+        # Converte data e hora
+        data_consulta = datetime.strptime(f"{data_str} {hora_str}", "%Y-%m-%d %H:%M")
+        
+        # Cria consulta com Meet
+        resultado = meet_service.create_consultation_with_meet(
+            paciente_id=paciente_id,
+            data_consulta=data_consulta,
+            duracao_minutos=duracao,
+            observacoes=observacoes
+        )
+        
+        if resultado:
+            flash(f'✅ Consulta criada com sucesso! Google Meet: {resultado["meet_link"]}', 'success')
+            return redirect(url_for('consulta_detalhe', consulta_id=resultado['consulta_id']))
+        else:
+            flash('❌ Erro ao criar consulta com Google Meet.', 'danger')
+            
+    except Exception as e:
+        flash(f'Erro: {str(e)}', 'danger')
+    
+    # Em caso de erro, volta para o formulário
+    pacientes = Paciente.query.order_by(Paciente.nome_completo).all()
+    return render_template('consulta_meet_form.html', 
+                         titulo="Nova Consulta com Google Meet",
+                         pacientes=pacientes)
+
+@app.route('/consultas/<int:consulta_id>/adicionar-meet', methods=['POST'])
+def adicionar_meet_consulta(consulta_id):
+    """Adiciona Google Meet a uma consulta existente"""
+    try:
+        success = meet_service.add_meet_to_existing_consultation(str(consulta_id))
+        
+        if success:
+            flash('✅ Google Meet adicionado à consulta com sucesso!', 'success')
+        else:
+            flash('❌ Erro ao adicionar Google Meet à consulta.', 'danger')
+            
+    except Exception as e:
+        flash(f'Erro: {str(e)}', 'danger')
+    
+    return redirect(url_for('consulta_detalhe', consulta_id=consulta_id))
+
+@app.route('/consultas/proximas-com-meet')
+def proximas_consultas_meet():
+    """Lista consultas próximas que possuem Google Meet"""
+    days_ahead = request.args.get('days', 7, type=int)
+    
+    try:
+        consultas = meet_service.get_upcoming_consultations_with_meet(days_ahead)
+        
+        return render_template('consultas_meet_list.html',
+                             titulo=f"Consultas com Meet - Próximos {days_ahead} dias",
+                             consultas=consultas,
+                             days_ahead=days_ahead)
+                             
+    except Exception as e:
+        flash(f'Erro ao buscar consultas: {str(e)}', 'danger')
+        return redirect(url_for('listar_consultas'))
+
+@app.route('/api/meet/statistics')
+def meet_statistics():
+    """API para estatísticas do Google Meet"""
+    try:
+        stats = meet_service.generate_meet_statistics()
+        return jsonify({
+            'success': True,
+            'data': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Erro: {str(e)}'
+        })
+
+@app.route('/consultas/dashboard-meet')
+def dashboard_meet():
+    """Dashboard com estatísticas do Google Meet"""
+    try:
+        stats = meet_service.generate_meet_statistics()
+        consultas_proximas = meet_service.get_upcoming_consultations_with_meet(7)
+        
+        return render_template('meet_dashboard.html',
+                             titulo="Dashboard Google Meet",
+                             stats=stats,
+                             consultas_proximas=consultas_proximas)
+                             
+    except Exception as e:
+        flash(f'Erro: {str(e)}', 'danger')
+        return redirect(url_for('home'))
+
+# === FIM DAS ROTAS DO GOOGLE MEET ===
+
+@app.route('/api/consultas/<int:consulta_id>/status', methods=['POST'])
+def atualizar_status_consulta(consulta_id):
+    """API para atualizar status de uma consulta"""
+    try:
+        data = request.get_json()
+        status = data.get('status')
+        observacoes = data.get('observacoes', '')
+        
+        consulta = Consulta.query.get_or_404(consulta_id)
+        
+        # Mapeia status do frontend para campos do banco
+        if status == 'finalizada':
+            consulta.status = 'finalizada'
+            consulta.observacoes = observacoes
+            consulta.data_finalizacao = datetime.now(timezone.utc)
+        elif status == 'em_andamento':
+            consulta.status = 'em_andamento'
+            consulta.data_inicio = datetime.now(timezone.utc)
+        elif status == 'cancelada':
+            consulta.status = 'cancelada'
+            consulta.observacoes = observacoes
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Status da consulta atualizado para {status}'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Erro: {str(e)}'
+        }), 500
 
 @app.route('/paciente/<int:paciente_id>/plano/novo', methods=['GET', 'POST'])
 def novo_plano(paciente_id):
@@ -688,4 +1014,9 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         seed_taco_data()
-    app.run(debug=True, port=5000)
+    
+    # Configuração para desenvolvimento vs produção
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    port = int(os.environ.get('PORT', 5000))
+    
+    app.run(debug=debug_mode, host='0.0.0.0', port=port)

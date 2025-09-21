@@ -1,0 +1,8 @@
+# railway.toml - Configuração para Railway
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "always"

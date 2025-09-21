@@ -36,6 +36,26 @@
                         <a class="nav-link {% if 'consulta' in request.path %}active{% endif %}" href="{{ url_for('listar_consultas') }}">Consultas</a>
                     </li>
                     <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'meet' in request.path %}active{% endif %}" href="#" id="navbarDropdownMeet" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-video me-1"></i>Google Meet
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownMeet">
+                            <li><a class="dropdown-item" href="{{ url_for('dashboard_meet') }}">
+                                <i class="fas fa-chart-bar me-2"></i>Dashboard
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('criar_consulta_com_meet') }}">
+                                <i class="fas fa-plus me-2"></i>Nova Consulta com Meet
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('proximas_consultas_meet') }}">
+                                <i class="fas fa-calendar-alt me-2"></i>Consultas com Meet
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('configurar_google_calendar') }}">
+                                <i class="fas fa-cog me-2"></i>Configurar Google Calendar
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {% if 'ferramentas' in request.path %}active{% endif %}" href="#" id="navbarDropdownTools" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Ferramentas
                         </a>

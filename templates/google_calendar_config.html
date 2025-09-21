@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - NutriPlatform{% endblock %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fab fa-google me-2"></i>{{ titulo }}</h1>
+        <a href="{{ url_for('listar_consultas') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar para Consultas
+        </a>
+    </div>
+
+    {% if not authenticated %}
+    <!-- Seção de Configuração Inicial -->
+    <div class="alert alert-info">
+        <h4><i class="fas fa-info-circle me-2"></i>Configuração Necessária</h4>
+        <p>Para sincronizar com o Google Calendar da sua esposa, você precisa configurar as credenciais primeiro.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-cog me-2"></i>Passo a Passo da Configuração</h5>
+        </div>
+        <div class="card-body">
+            <ol class="list-group list-group-numbered">
+                <li class="list-group-item">
+                    <strong>Acesse o Google Cloud Console:</strong>
+                    <a href="https://console.cloud.google.com/" target="_blank" class="btn btn-sm btn-primary ms-2">
+                        <i class="fas fa-external-link-alt me-1"></i>Abrir Console
+                    </a>
+                </li>
+                <li class="list-group-item">
+                    <strong>Crie um projeto novo</strong> ou selecione um existente
+                </li>
+                <li class="list-group-item">
+                    <strong>Ative a Google Calendar API:</strong>
+                    <br><small class="text-muted">Navegue para "APIs e Serviços" > "Biblioteca" > "Google Calendar API" > "Ativar"</small>
+                </li>
+                <li class="list-group-item">
+                    <strong>Crie credenciais OAuth 2.0:</strong>
+                    <br><small class="text-muted">"APIs e Serviços" > "Credenciais" > "Criar Credenciais" > "ID do cliente OAuth"</small>
+                </li>
+                <li class="list-group-item">
+                    <strong>Escolha "Aplicativo para desktop"</strong>
+                </li>
+                <li class="list-group-item">
+                    <strong>Baixe o arquivo JSON</strong> e renomeie para <code>credentials.json</code>
+                </li>
+                <li class="list-group-item">
+                    <strong>Coloque o arquivo na pasta do projeto</strong> e reinicie a aplicação
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="alert alert-success mt-4">
+        <h6><i class="fas fa-gift me-2"></i>Totalmente Gratuito!</h6>
+        <p class="mb-0">A API do Google Calendar é <strong>100% gratuita</strong> para uso pessoal, com limite de 1.000.000 requisições por dia (mais que suficiente para o uso da clínica).</p>
+    </div>
+    
+    {% else %}
+    <!-- Seção de Sincronização -->
+    <div class="alert alert-success">
+        <h4><i class="fas fa-check-circle me-2"></i>Google Calendar Conectado!</h4>
+        <p class="mb-0">A autenticação foi realizada com sucesso. Você pode sincronizar as consultas agora.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-sync me-2"></i>Sincronizar Consultas</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('sincronizar_consultas') }}" method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="calendar_id" class="form-label">Calendário</label>
+                                <select id="calendar_id" name="calendar_id" class="form-select" required>
+                                    {% for calendar in calendars %}
+                                    <option value="{{ calendar.id }}" {% if calendar.primary %}selected{% endif %}>
+                                        {{ calendar.summary }} {% if calendar.primary %}(Primário){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="days_ahead" class="form-label">Dias para frente</label>
+                                <input type="number" id="days_ahead" name="days_ahead" class="form-control" value="30" min="1" max="365">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="days_behind" class="form-label">Dias para trás</label>
+                                <input type="number" id="days_behind" name="days_behind" class="form-control" value="7" min="0" max="30">
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-search me-2"></i>O que será sincronizado?</h6>
+                            <p class="mb-0">O sistema buscará automaticamente eventos que contenham palavras relacionadas à nutrição como: "consulta", "nutrição", "atendimento", "paciente", "dieta", etc.</p>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-sync me-2"></i>Sincronizar Agora
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-info me-2"></i>Informações</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Calendários encontrados:</strong> {{ calendars|length }}</p>
+                    
+                    <hr>
+                    
+                    <h6><i class="fas fa-robot me-2"></i>Funcionalidades</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success me-2"></i>Sincronização automática</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Detecção de pacientes</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Extração de contatos</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Associação inteligente</li>
+                    </ul>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('consultas_nao_associadas') }}" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Ver Não Associadas
+                        </a>
+                        <button onclick="testConnection()" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-link me-2"></i>Testar Conexão
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function testConnection() {
+    fetch('{{ url_for("test_google_calendar_connection") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ ${data.message}\nCalendários encontrados: ${data.calendars_count}`);
+            } else {
+                alert(`❌ ${data.message}`);
+            }
+        })
+        .catch(error => {
+            alert('❌ Erro na conexão: ' + error);
+        });
+}
+</script>
+{% endblock %}
