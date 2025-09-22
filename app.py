@@ -86,10 +86,17 @@ dashboard_service = DashboardService(app, db)
 if getattr(sys, '_MEIPASS', False):
     default_data_dir = os.path.join(os.getcwd(), 'data')
 else:
+    # Define project_root como diretório atual
+    project_root = os.path.dirname(os.path.abspath(__file__))
     default_data_dir = os.path.join(project_root, 'data')
 DATA_DIR = os.environ.get('APP_DATA_DIR', default_data_dir)
 os.makedirs(DATA_DIR, exist_ok=True)
 logger.info(f"Data directory for external saves: {DATA_DIR}")
+
+# Disponibiliza datetime para templates
+@app.context_processor
+def inject_datetime():
+    return {'datetime': datetime}
 
 def _slug(text: str) -> str:
     """Gera slug seguro para nomes de pasta a partir do nome do paciente."""
@@ -974,6 +981,98 @@ def autocomplete_alimentos():
                 break
 
     return jsonify(resultados)
+
+# --- ROTAS GOOGLE OAUTH2 ---
+@app.route('/google-auth')
+def google_auth():
+    """Inicia o processo de autenticação Google"""
+    try:
+        from google_auth_oauthlib.flow import Flow
+        import os
+        
+        # Configuração OAuth2
+        client_config = {
+            'web': {
+                'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+                'client_secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+                'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                'token_uri': 'https://oauth2.googleapis.com/token',
+                'redirect_uris': [os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/oauth2callback')]
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=['https://www.googleapis.com/auth/calendar.readonly',
+                   'https://www.googleapis.com/auth/calendar.events'],
+            redirect_uri=client_config['web']['redirect_uris'][0]
+        )
+        
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        # Salva state na sessão para verificação
+        from flask import session
+        session['state'] = state
+        
+        return redirect(authorization_url)
+        
+    except Exception as e:
+        flash(f'Erro ao iniciar autenticação Google: {str(e)}', 'danger')
+        return redirect(url_for('home'))
+
+@app.route('/oauth2callback')
+def oauth2callback():
+    """Callback do OAuth2 do Google"""
+    try:
+        from google_auth_oauthlib.flow import Flow
+        from flask import session
+        import pickle
+        import os
+        
+        # Verifica state
+        state = session.get('state')
+        if not state or request.args.get('state') != state:
+            flash('Estado de autenticação inválido', 'danger')
+            return redirect(url_for('home'))
+        
+        # Configuração OAuth2
+        client_config = {
+            'web': {
+                'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+                'client_secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+                'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                'token_uri': 'https://oauth2.googleapis.com/token',
+                'redirect_uris': [os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/oauth2callback')]
+            }
+        }
+        
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=['https://www.googleapis.com/auth/calendar.readonly',
+                   'https://www.googleapis.com/auth/calendar.events'],
+            redirect_uri=client_config['web']['redirect_uris'][0]
+        )
+        
+        # Troca código por token
+        flow.fetch_token(authorization_response=request.url)
+        
+        # Salva credenciais
+        credentials = flow.credentials
+        with open('token.pickle', 'wb') as token:
+            pickle.dump(credentials, token)
+        
+        flash('✅ Autenticação Google realizada com sucesso!', 'success')
+        flash('📅 Agora você pode sincronizar consultas com Google Calendar', 'info')
+        
+        return redirect(url_for('consultas_listar'))
+        
+    except Exception as e:
+        flash(f'Erro no callback OAuth2: {str(e)}', 'danger')
+        return redirect(url_for('home'))
 
 # --- FUNÇÃO PARA POVOAR O BANCO DE DADOS (VERSÃO FINAL) ---
 def seed_taco_data():

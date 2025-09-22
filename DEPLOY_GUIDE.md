@@ -1,164 +1,81 @@
-# 🚀 Deploy NutriPro no Vercel com Firebase
+# 🚀 Guia de Deploy - NutriPro
 
-## 🎯 **Por que Vercel + Firebase?**
+## Opções de Deploy
 
-✅ **100% GRATUITO** para projetos pequenos/médios  
-✅ **Acesso global** - funciona no celular, casa, trabalho  
-✅ **HTTPS automático** e CDN mundial  
-✅ **Deploy automático** via GitHub  
-✅ **Banco em tempo real** com Firebase  
+### 1. Vercel (Recomendado)
+```bash
+# Instalar Vercel CLI
+npm i -g vercel
 
----
+# Fazer deploy
+vercel
 
-## 📋 **Passo a Passo Completo**
+# Configurar variáveis de ambiente no dashboard Vercel
+```
 
-### **ETAPA 1: Configurar Firebase (5 minutos)**
+### 2. Railway
+```bash
+# Conectar ao Railway
+railway login
+railway link
 
-1. **Criar projeto Firebase:**
-   - Acesse: https://console.firebase.google.com
-   - Clique "Criar projeto"
-   - Nome: `nutripro-plataforma`
-   - Desabilite Google Analytics (não precisamos)
+# Deploy
+railway up
+```
 
-2. **Ativar Firestore Database:**
-   - No painel lateral: "Firestore Database"
-   - Clique "Criar banco de dados"
-   - Escolha "Iniciar no modo de teste"
-   - Localização: `southamerica-east1` (São Paulo)
+### 3. Heroku
+```bash
+# Criar app
+heroku create nutripro-app
 
-3. **Criar credenciais de serviço:**
-   - Vá em "Configurações do projeto" (ícone de engrenagem)
-   - Aba "Contas de serviço"
-   - Clique "Gerar nova chave privada"
-   - Baixe o arquivo JSON
+# Configurar variáveis
+heroku config:set FLASK_ENV=production
+heroku config:set SECRET_KEY=your-secret-key
+# ... outras variáveis
 
-### **ETAPA 2: Configurar Vercel (3 minutos)**
+# Deploy
+git push heroku main
+```
 
-1. **Preparar repositório GitHub:**
-   ```bash
-   git add .
-   git commit -m "Configurar para deploy Vercel + Firebase"
-   git push origin main
-   ```
+### 4. Docker
+```bash
+# Build da imagem
+docker build -t nutripro .
 
-2. **Deploy no Vercel:**
-   - Acesse: https://vercel.com
-   - Conecte sua conta GitHub
-   - Clique "Import Project"
-   - Selecione `nutripro-plataforma`
-   - Vercel detecta Flask automaticamente
+# Executar container
+docker run -d -p 5000:5000 --env-file .env.production nutripro
 
-3. **Configurar variáveis de ambiente no Vercel:**
-   - Na dashboard do projeto → "Settings" → "Environment Variables"
-   - Adicione:
+# Ou usar docker-compose
+docker-compose up -d
+```
 
-   ```
-   FLASK_ENV = production
-   SECRET_KEY = sua-chave-super-secreta-aqui
-   FIREBASE_CREDENTIALS = {conteúdo do arquivo JSON baixado}
-   ```
+## Configurações Necessárias
 
-   ⚠️ **IMPORTANTE**: Para `FIREBASE_CREDENTIALS`, copie TODO o conteúdo do arquivo JSON baixado e cole como uma única linha.
+### Variáveis de Ambiente
+- Copie `.env.production` e configure:
+  - `SECRET_KEY`: Chave secreta única
+  - `GOOGLE_CLIENT_ID`: Do Google Cloud Console
+  - `GOOGLE_CLIENT_SECRET`: Do Google Cloud Console
+  - `FIREBASE_CREDENTIALS`: JSON do Firebase
+  - `GOOGLE_REDIRECT_URI`: URL do seu domínio
 
-### **ETAPA 3: Deploy Automático**
+### Firebase
+- Atualize regras de segurança para produção
+- Configure domínio autorizado
 
-1. **Fazer deploy:**
-   ```bash
-   git push origin main
-   ```
+### Google Calendar
+- Adicione domínio de produção nas URLs autorizadas
 
-2. **Aguardar build (2-3 minutos)**
-   - Vercel faz build automático
-   - Gera URL como: `nutripro-plataforma.vercel.app`
+## Checklist de Deploy
+- [ ] Configurar variáveis de ambiente
+- [ ] Atualizar URLs de redirect
+- [ ] Configurar regras Firebase para produção
+- [ ] Testar funcionalidades principais
+- [ ] Configurar monitoramento (opcional)
 
-3. **Testar aplicação:**
-   - Acesse a URL gerada
-   - Aplicação estará online 24/7! 🎉
-
----
-
-## 🔧 **Configuração Local Híbrida**
-
-Para desenvolvimento, você pode usar Firebase mesmo localmente:
-
-1. **Instalar dependências:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Configurar Firebase local:**
-   - Coloque o arquivo JSON baixado como `firebase-credentials.json`
-   - OU configure a variável `FIREBASE_CREDENTIALS` no `.env`
-
-3. **Executar:**
-   ```bash
-   python app.py
-   ```
-
----
-
-## 📱 **Vantagens do Deploy Cloud**
-
-### **Antes (Local):**
-❌ Só funciona no seu computador  
-❌ Precisa estar ligado sempre  
-❌ Não acessa pelo celular  
-❌ Dados podem ser perdidos  
-
-### **Depois (Vercel + Firebase):**
-✅ **Acesso universal**: celular, tablet, qualquer lugar  
-✅ **24/7 online**: sempre disponível  
-✅ **Backup automático**: dados na nuvem  
-✅ **Performance**: CDN global  
-✅ **HTTPS**: seguro por padrão  
-✅ **Escalável**: suporta crescimento  
-
----
-
-## 🎯 **Próximos Passos Após Deploy**
-
-1. **Testar todas as funcionalidades**
-2. **Migrar dados existentes** (se houver)
-3. **Configurar Google Calendar** 
-4. **Configurar domínio personalizado** (opcional)
-5. **Configurar backup** (automático no Firebase)
-
----
-
-## 🆘 **Resolução de Problemas**
-
-### **Erro de Build no Vercel:**
-- Verifique se `requirements.txt` está correto
-- Verifique se `vercel.json` está na raiz
-- Logs detalhados na dashboard do Vercel
-
-### **Erro de Firebase:**
-- Verifique se `FIREBASE_CREDENTIALS` está correto
-- Verifique se Firestore está ativado
-- Verifique regras de segurança do Firestore
-
-### **Aplicação não carrega:**
-- Verifique variáveis de ambiente
-- Verifique logs no Vercel
-- Teste localmente primeiro
-
----
-
-## 💰 **Custos (GRATUITO!)**
-
-### **Vercel (Free Tier):**
-- 100GB de largura de banda/mês
-- Deploy ilimitado
-- HTTPS e CDN inclusos
-
-### **Firebase (Spark Plan - Gratuito):**
-- 1GB de storage
-- 20,000 reads/dia
-- 20,000 writes/dia
-- 10GB de transfer/mês
-
-**Total: R$ 0,00/mês** para projetos pequenos/médios! 🎉
-
----
-
-**Pronto para fazer o deploy?** Execute os comandos e sua aplicação estará online em poucos minutos!
+## Suporte
+Em caso de problemas, verifique:
+1. Logs da aplicação
+2. Configuração das variáveis
+3. Conectividade com Firebase
+4. URLs de redirect do Google

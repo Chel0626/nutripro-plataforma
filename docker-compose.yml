@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  nutripro:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    volumes:
+      - ./data:/app/data
+      - ./.env.production:/app/.env
+    restart: unless-stopped
+    
+  # Opcional: adicione PostgreSQL se necessário
+  # postgres:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: nutripro
+  #     POSTGRES_USER: nutripro
+  #     POSTGRES_PASSWORD: secure_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:

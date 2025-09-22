@@ -12,9 +12,13 @@ from dataclasses import dataclass
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
+load_dotenv()
 
 # Escopos necessários para ler E CRIAR eventos do Google Calendar com Meet
 SCOPES = [
@@ -54,11 +58,21 @@ class CalendarEvent:
 class GoogleCalendarIntegration:
     """Classe para integração com Google Calendar"""
     
-    def __init__(self, credentials_file: str = 'credentials.json', token_file: str = 'token.pickle'):
-        self.credentials_file = credentials_file
+    def __init__(self, token_file: str = 'token.pickle'):
         self.token_file = token_file
         self.service = None
         self.creds = None
+        
+        # Configuração OAuth2 a partir das variáveis de ambiente
+        self.client_config = {
+            'web': {
+                'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+                'client_secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+                'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+                'token_uri': 'https://oauth2.googleapis.com/token',
+                'redirect_uris': [os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/oauth2callback')]
+            }
+        }
         
     def authenticate(self) -> bool:
         """
@@ -66,6 +80,11 @@ class GoogleCalendarIntegration:
         Retorna True se autenticação foi bem-sucedida
         """
         try:
+            # Verifica configuração
+            if not self.client_config['web']['client_id']:
+                print("❌ GOOGLE_CLIENT_ID não configurado no .env!")
+                return False
+                
             # Verifica se já existem credenciais salvas
             if os.path.exists(self.token_file):
                 with open(self.token_file, 'rb') as token:
@@ -76,19 +95,20 @@ class GoogleCalendarIntegration:
                 if self.creds and self.creds.expired and self.creds.refresh_token:
                     self.creds.refresh(Request())
                 else:
-                    if not os.path.exists(self.credentials_file):
-                        print(f"❌ Arquivo {self.credentials_file} não encontrado!")
-                        print("📋 Para configurar a integração:")
-                        print("1. Acesse: https://console.cloud.google.com/")
-                        print("2. Crie um projeto ou selecione um existente")
-                        print("3. Ative a Google Calendar API")
-                        print("4. Crie credenciais OAuth 2.0")
-                        print("5. Baixe o arquivo JSON e renomeie para 'credentials.json'")
-                        return False
+                    print("🔑 Iniciando autenticação OAuth2...")
+                    print("📝 Sua esposa precisará autorizar o acesso ao Google Calendar")
+                    flow = Flow.from_client_config(
+                        self.client_config, 
+                        scopes=SCOPES,
+                        redirect_uri=self.client_config['web']['redirect_uris'][0]
+                    )
                     
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_file, SCOPES)
-                    self.creds = flow.run_local_server(port=0)
+                    # Para desenvolvimento local
+                    auth_url, _ = flow.authorization_url(prompt='consent')
+                    print(f"🌐 Acesse este link para autorizar: {auth_url}")
+                    
+                    # Aguarda código de autorização (este será implementado na rota Flask)
+                    return False  # Retorna False para indicar que precisa de autorização web
                 
                 # Salva as credenciais para a próxima execução
                 with open(self.token_file, 'wb') as token:
