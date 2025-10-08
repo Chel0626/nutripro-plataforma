@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalKcalInput = document.getElementById('total_kcal');
 
     const formMetas = document.getElementById('form-metas');
+    const resultadoDistribuicaoDiv = document.getElementById('resultado-distribuicao');
+    const cardDistribuicao = document.getElementById('card-distribuicao');
+    const distribuicaoResultados = document.getElementById('distribuicao-resultados');
+    // const btnProsseguirPlano = document.getElementById('btn-prosseguir-plano');
     const refeicoesContainer = document.getElementById('refeicoes-container');
     const btnSalvarPlano = document.getElementById('btn-salvar-plano');
     const diabetesCheck = document.getElementById('diabetes-check');
@@ -18,8 +22,14 @@ document.addEventListener('DOMContentLoaded', function() {
         formCalcCalorias.addEventListener('submit', handleCalcularCalorias);
     }
     if (formMetas) {
-        formMetas.addEventListener('submit', handleDefinirMetas);
+        formMetas.addEventListener('submit', function(e) {
+            e.preventDefault();
+            calcularDistribuicaoAutomatica();
+        });
     }
+    // if (btnProsseguirPlano) {
+    //     btnProsseguirPlano.addEventListener('click', handleProsseguirPlano);
+    // }
     if (btnSalvarPlano) {
         btnSalvarPlano.addEventListener('click', handleSalvarPlano);
     }
@@ -74,18 +84,277 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function handleDefinirMetas(event) {
-        event.preventDefault();
+    function calcularDistribuicaoAutomatica() {
         const formData = new FormData(formMetas);
         const dados = Object.fromEntries(formData.entries());
+        
+        // Validação das porcentagens
+        const somaPerc = parseFloat(dados.perc_carb) + parseFloat(dados.perc_prot) + parseFloat(dados.perc_gord);
+        if (Math.round(somaPerc) !== 100) {
+            alert('A soma das porcentagens de macronutrientes deve ser 100%.');
+            return;
+        }
+        
         fetch('/api/calcular_distribuicao', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         })
         .then(response => response.json())
-        .then(data => data.sucesso ? renderizarRefeicoes(data.resultado) : alert('Erro: ' + data.erro));
+        .then(data => {
+            if (data.sucesso) {
+                mostrarResultadosDistribuicao(data.resultado);
+            } else {
+                alert('Erro: ' + data.erro);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro de comunicação. Verifique o console para mais detalhes.');
+        });
     }
+
+    function mostrarResultadosDistribuicao(resultados) {
+        // Armazena os resultados para usar posteriormente
+        window.distribuicaoResultados = resultados;
+        
+        const macrosGramas = resultados.macros_gramas;
+        
+        // Atualiza os totais diários
+        document.getElementById('total-carb').textContent = macrosGramas.carboidrato.toFixed(1);
+        document.getElementById('total-prot').textContent = macrosGramas.proteina.toFixed(1);
+        document.getElementById('total-gord').textContent = macrosGramas.gordura.toFixed(1);
+        
+        // Atualiza resumo por refeição
+        document.getElementById('carb-refeicao-grande').textContent = resultados.por_refeicao_grande.carboidrato.toFixed(1);
+        document.getElementById('prot-refeicao-grande').textContent = resultados.por_refeicao_grande.proteina.toFixed(1);
+        document.getElementById('gord-refeicao-grande').textContent = resultados.por_refeicao_grande.gordura.toFixed(1);
+        
+        document.getElementById('carb-refeicao-pequena').textContent = resultados.por_refeicao_pequena.carboidrato.toFixed(1);
+        document.getElementById('prot-refeicao-pequena').textContent = resultados.por_refeicao_pequena.proteina.toFixed(1);
+        document.getElementById('gord-refeicao-pequena').textContent = resultados.por_refeicao_pequena.gordura.toFixed(1);
+        
+        // Renderiza as refeições ajustáveis
+        renderizarRefeicoesAjustaveis(resultados);
+        
+        // Mostra a seção de resultados
+        document.getElementById('resultado-distribuicao').style.display = 'block';
+        
+        // Scroll para os resultados
+        document.getElementById('resultado-distribuicao').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderizarRefeicoesAjustaveis(resultados) {
+        const grandesContainer = document.getElementById('refeicoes-grandes-container');
+        const pequenasContainer = document.getElementById('refeicoes-pequenas-container');
+        
+        // Limpa containers
+        grandesContainer.innerHTML = '';
+        pequenasContainer.innerHTML = '';
+        
+        // Refeições grandes
+        if (resultados.num_refeicoes_grandes > 0) {
+            grandesContainer.innerHTML = '<h5>Refeições Grandes</h5>';
+            for (let i = 1; i <= resultados.num_refeicoes_grandes; i++) {
+                grandesContainer.innerHTML += `
+                    <div class="card mb-3 meal-group" data-group="grandes">
+                        <div class="card-body">
+                            <h6 class="card-title">Refeição Grande ${i}</h6>
+                            <div class="row">
+                                <div class="col">
+                                    <label class="form-label">Carboidratos (g)</label>
+                                    <input type="number" step="0.1" class="form-control macro-input" 
+                                           name="refeicoes_grandes_ajustadas-${i-1}-carboidrato" 
+                                           value="${resultados.por_refeicao_grande.carboidrato.toFixed(1)}">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label">Proteínas (g)</label>
+                                    <input type="number" step="0.1" class="form-control macro-input" 
+                                           name="refeicoes_grandes_ajustadas-${i-1}-proteina" 
+                                           value="${resultados.por_refeicao_grande.proteina.toFixed(1)}">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label">Gorduras (g)</label>
+                                    <input type="number" step="0.1" class="form-control macro-input" 
+                                           name="refeicoes_grandes_ajustadas-${i-1}-gordura" 
+                                           value="${resultados.por_refeicao_grande.gordura.toFixed(1)}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Refeições pequenas
+        if (resultados.num_refeicoes_pequenas > 0) {
+            pequenasContainer.innerHTML = '<h5>Refeições Pequenas</h5>';
+            for (let i = 1; i <= resultados.num_refeicoes_pequenas; i++) {
+                pequenasContainer.innerHTML += `
+                    <div class="card mb-3 meal-group" data-group="pequenas">
+                        <div class="card-body">
+                            <h6 class="card-title">Refeição Pequena ${i}</h6>
+                            <div class="row">
+                                <div class="col">
+                                    <label class="form-label">Carboidratos (g)</label>
+                                    <input type="number" step="0.1" class="form-control macro-input" 
+                                           name="refeicoes_pequenas_ajustadas-${i-1}-carboidrato" 
+                                           value="${resultados.por_refeicao_pequena.carboidrato.toFixed(1)}">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label">Proteínas (g)</label>
+                                    <input type="number" step="0.1" class="form-control macro-input" 
+                                           name="refeicoes_pequenas_ajustadas-${i-1}-proteina" 
+                                           value="${resultados.por_refeicao_pequena.proteina.toFixed(1)}">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label">Gorduras (g)</label>
+                                    <input type="number" step="0.1" class="form-control macro-input" 
+                                           name="refeicoes_pequenas_ajustadas-${i-1}-gordura" 
+                                           value="${resultados.por_refeicao_pequena.gordura.toFixed(1)}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Adiciona event listeners para redistribuição automática
+        adicionarListenersRedistribuicao();
+    }
+
+    function adicionarListenersRedistribuicao() {
+        const inputs = document.querySelectorAll('.macro-input');
+        inputs.forEach(input => {
+            // Armazena o valor original
+            input.defaultValue = input.value;
+            
+            input.addEventListener('input', function(event) {
+                const redistribuicaoAtiva = document.getElementById('toggle-redistribuicao').checked;
+                if (!redistribuicaoAtiva) {
+                    return;
+                }
+
+                const changedInput = event.target;
+                const parentGroup = changedInput.closest('.meal-group');
+                const groupType = parentGroup.dataset.group;
+                const inputName = changedInput.name.split('-').pop();
+                
+                const allInputsInGroup = document.querySelectorAll(`.meal-group[data-group="${groupType}"] .macro-input[name$="${inputName}"]`);
+                const otherInputs = Array.from(allInputsInGroup).filter(input => input !== changedInput);
+
+                if (otherInputs.length === 0) return;
+
+                let originalSum = 0;
+                allInputsInGroup.forEach(input => {
+                    originalSum += parseFloat(input.defaultValue || 0);
+                });
+
+                let currentSumOfOthers = 0;
+                otherInputs.forEach(input => {
+                    currentSumOfOthers += parseFloat(input.value || 0);
+                });
+
+                const changedValue = parseFloat(changedInput.value || 0);
+                const difference = originalSum - (currentSumOfOthers + changedValue);
+                const adjustmentPerInput = difference / otherInputs.length;
+
+                otherInputs.forEach(input => {
+                    const newValue = parseFloat(input.value || 0) + adjustmentPerInput;
+                    input.value = newValue.toFixed(1);
+                });
+            });
+        });
+    }
+
+    // Função global para recalcular totais
+    window.recalcularTotais = function() {
+        const grandesInputs = document.querySelectorAll('.meal-group[data-group="grandes"] .macro-input');
+        const pequeñasInputs = document.querySelectorAll('.meal-group[data-group="pequenas"] .macro-input');
+        
+        let totalCarb = 0, totalProt = 0, totalGord = 0;
+        
+        grandesInputs.forEach(input => {
+            const value = parseFloat(input.value || 0);
+            if (input.name.includes('carboidrato')) totalCarb += value;
+            else if (input.name.includes('proteina')) totalProt += value;
+            else if (input.name.includes('gordura')) totalGord += value;
+        });
+        
+        pequeñasInputs.forEach(input => {
+            const value = parseFloat(input.value || 0);
+            if (input.name.includes('carboidrato')) totalCarb += value;
+            else if (input.name.includes('proteina')) totalProt += value;
+            else if (input.name.includes('gordura')) totalGord += value;
+        });
+        
+        document.getElementById('total-carb').textContent = totalCarb.toFixed(1);
+        document.getElementById('total-prot').textContent = totalProt.toFixed(1);
+        document.getElementById('total-gord').textContent = totalGord.toFixed(1);
+        
+        alert(`Totais recalculados: Carboidratos: ${totalCarb.toFixed(1)}g, Proteínas: ${totalProt.toFixed(1)}g, Gorduras: ${totalGord.toFixed(1)}g`);
+    };
+
+    // Função global para finalizar distribuição
+    window.finalizarDistribuicao = function() {
+        if (!window.distribuicaoResultados) {
+            alert('Erro: Distribuição não calculada.');
+            return;
+        }
+        
+        // Coleta os valores ajustados das refeições
+        const refeicoesAjustadas = coletarValoresAjustados();
+        
+        // Atualiza os resultados com os valores ajustados
+        window.distribuicaoResultados.refeicoes_ajustadas = refeicoesAjustadas;
+        
+        // Renderiza o plano detalhado
+        renderizarRefeicoes(window.distribuicaoResultados);
+        
+        // Scroll para o plano detalhado
+        document.querySelector('#refeicoes-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    function coletarValoresAjustados() {
+        const refeicoes = [];
+        
+        // Coleta refeições grandes
+        const grandesGroups = document.querySelectorAll('.meal-group[data-group="grandes"]');
+        grandesGroups.forEach((group, index) => {
+            const carbInput = group.querySelector('input[name*="carboidrato"]');
+            const protInput = group.querySelector('input[name*="proteina"]');
+            const gordInput = group.querySelector('input[name*="gordura"]');
+            
+            refeicoes.push({
+                tipo: 'grande',
+                indice: index,
+                carboidrato: parseFloat(carbInput.value || 0),
+                proteina: parseFloat(protInput.value || 0),
+                gordura: parseFloat(gordInput.value || 0)
+            });
+        });
+        
+        // Coleta refeições pequenas
+        const pequeñasGroups = document.querySelectorAll('.meal-group[data-group="pequenas"]');
+        pequeñasGroups.forEach((group, index) => {
+            const carbInput = group.querySelector('input[name*="carboidrato"]');
+            const protInput = group.querySelector('input[name*="proteina"]');
+            const gordInput = group.querySelector('input[name*="gordura"]');
+            
+            refeicoes.push({
+                tipo: 'pequena',
+                indice: index,
+                carboidrato: parseFloat(carbInput.value || 0),
+                proteina: parseFloat(protInput.value || 0),
+                gordura: parseFloat(gordInput.value || 0)
+            });
+        });
+        
+        return refeicoes;
+    }
+
+    // Função removida - funcionalidade integrada em finalizarDistribuicao()
 
     function handleMudancaEmRefeicao(event) {
         if (event.target.classList.contains('food-quantity')) {
@@ -104,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderizarRefeicoes(resultados) {
         refeicoesContainer.innerHTML = '';
+        
         const criarRefeicao = (nome, meta, index) => {
             const div = document.createElement('div');
             div.className = 'refeicao-bloco card mb-4';
@@ -129,9 +399,31 @@ document.addEventListener('DOMContentLoaded', function() {
             refeicoesContainer.appendChild(div);
             inicializarAutocomplete(`#busca-alimento-${index}`, div);
         };
+        
         let mealIndex = 0;
-        for (let i = 0; i < resultados.num_refeicoes_grandes; i++) criarRefeicao(`Refeição Grande ${i + 1}`, resultados.por_refeicao_grande, mealIndex++);
-        for (let i = 0; i < resultados.num_refeicoes_pequenas; i++) criarRefeicao(`Refeição Pequena ${i + 1}`, resultados.por_refeicao_pequena, mealIndex++);
+        
+        // Usa valores ajustados se disponível, senão usa os valores padrão
+        if (resultados.refeicoes_ajustadas) {
+            // Renderiza usando valores ajustados
+            const grandes = resultados.refeicoes_ajustadas.filter(r => r.tipo === 'grande');
+            const pequenas = resultados.refeicoes_ajustadas.filter(r => r.tipo === 'pequena');
+            
+            grandes.forEach((refeicao, i) => {
+                criarRefeicao(`Refeição Grande ${i + 1}`, refeicao, mealIndex++);
+            });
+            
+            pequenas.forEach((refeicao, i) => {
+                criarRefeicao(`Refeição Pequena ${i + 1}`, refeicao, mealIndex++);
+            });
+        } else {
+            // Renderiza usando valores padrão
+            for (let i = 0; i < resultados.num_refeicoes_grandes; i++) {
+                criarRefeicao(`Refeição Grande ${i + 1}`, resultados.por_refeicao_grande, mealIndex++);
+            }
+            for (let i = 0; i < resultados.num_refeicoes_pequenas; i++) {
+                criarRefeicao(`Refeição Pequena ${i + 1}`, resultados.por_refeicao_pequena, mealIndex++);
+            }
+        }
     }
 
     function inicializarAutocomplete(selector, mealElement) {

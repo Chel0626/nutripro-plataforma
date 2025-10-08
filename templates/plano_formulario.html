@@ -60,25 +60,93 @@
             </div>
 
             <div class="card mb-4">
-                <div class="card-header"><h4>2. Definição de Metas de Macros</h4></div>
+                <div class="card-header"><h4>2. Distribuição de Macros</h4></div>
                 <div class="card-body">
+                    <p class="text-muted">Configure a distribuição de macronutrientes e refeições. Após calcular, você pode ajustar manualmente os valores.</p>
+                    
                     <form id="form-metas" action="#" method="POST">
                         <div class="row">
                             <div class="col-md-6 mb-3"><label for="total_kcal" class="form-label">Calorias Totais (kcal)</label><input id="total_kcal" name="total_kcal" type="number" class="form-control" required></div>
                             <div class="col-md-6 mb-3"><label for="peso" class="form-label">Peso do Paciente (kg)</label><input id="peso" name="peso" type="number" step="0.1" class="form-control" value="{{ paciente.peso or '' }}" required></div>
                         </div>
+                        
+                        <h5 class="mt-4">Distribuição de Macronutrientes (%)</h5>
                         <div class="row">
                             <div class="col-md-4 mb-3"><label for="perc_carb" class="form-label">Carboidratos (%)</label><input id="perc_carb" name="perc_carb" type="number" step="0.1" value="45.0" class="form-control" required></div>
                             <div class="col-md-4 mb-3"><label for="perc_prot" class="form-label">Proteínas (%)</label><input id="perc_prot" name="perc_prot" type="number" step="0.1" value="20.0" class="form-control" required></div>
                             <div class="col-md-4 mb-3"><label for="perc_gord" class="form-label">Gorduras (%)</label><input id="perc_gord" name="perc_gord" type="number" step="0.1" value="35.0" class="form-control" required></div>
                         </div>
+                        
+                        <h5 class="mt-4">Distribuição por Refeições</h5>
                         <div class="row">
                             <div class="col-md-4 mb-3"><label for="num_refeicoes_grandes" class="form-label">Nº de Refeições Grandes</label><input id="num_refeicoes_grandes" name="num_refeicoes_grandes" type="number" value="3" class="form-control" required></div>
                             <div class="col-md-4 mb-3"><label for="num_refeicoes_pequenas" class="form-label">Nº de Refeições Pequenas</label><input id="num_refeicoes_pequenas" name="num_refeicoes_pequenas" type="number" value="3" class="form-control" required></div>
-                            <div class="col-md-4 mb-3"><label for="perc_dist_grandes" class="form-label">% Cal. nas Grandes</label><input id="perc_dist_grandes" name="perc_dist_grandes" type="number" value="70" class="form-control" required></div>
+                            <div class="col-md-4 mb-3"><label for="perc_dist_grandes" class="form-label">% Calorias nas Grandes</label><input id="perc_dist_grandes" name="perc_dist_grandes" type="number" value="70" class="form-control" required></div>
                         </div>
-                        <button type="submit" class="btn btn-success">Definir Metas e Refeições</button>
+                        
+                        <button type="submit" class="btn btn-primary w-100">1. Calcular Distribuição Automática</button>
                     </form>
+                    
+                    <!-- Resultados da Distribuição -->
+                    <div id="resultado-distribuicao" class="mt-4" style="display: none;">
+                        <hr class="my-4">
+                        <h4>Resultados da Distribuição Automática</h4>
+                        <div class="alert alert-info">
+                            <h5>Totais Diários (em gramas):</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Carboidratos:</strong> <span id="total-carb">0</span> g</li>
+                                <li><strong>Proteínas:</strong> <span id="total-prot">0</span> g</li>
+                                <li><strong>Gorduras:</strong> <span id="total-gord">0</span> g</li>
+                            </ul>
+                        </div>
+
+                        <h4 class="mt-4">Ajuste Manual das Refeições</h4>
+                        <p class="text-muted">Altere os valores abaixo. A diferença será redistribuída automaticamente entre as outras refeições do mesmo tipo.</p>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="toggle-redistribuicao" checked>
+                            <label class="form-check-label" for="toggle-redistribuicao">Ativar redistribuição automática</label>
+                        </div>
+
+                        <div id="refeicoes-grandes-container">
+                            <!-- Refeições grandes serão inseridas aqui -->
+                        </div>
+
+                        <div id="refeicoes-pequenas-container">
+                            <!-- Refeições pequenas serão inseridas aqui -->
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card text-center">
+                                    <div class="card-header"><strong>Por Refeição Grande</strong></div>
+                                    <div class="card-body">
+                                        <p class="card-text" id="resumo-refeicao-grande">
+                                            Carboidratos: <span id="carb-refeicao-grande">0</span> g<br>
+                                            Proteínas: <span id="prot-refeicao-grande">0</span> g<br>
+                                            Gorduras: <span id="gord-refeicao-grande">0</span> g
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card text-center">
+                                    <div class="card-header"><strong>Por Refeição Pequena</strong></div>
+                                    <div class="card-body">
+                                        <p class="card-text" id="resumo-refeicao-pequena">
+                                            Carboidratos: <span id="carb-refeicao-pequena">0</span> g<br>
+                                            Proteínas: <span id="prot-refeicao-pequena">0</span> g<br>
+                                            Gorduras: <span id="gord-refeicao-pequena">0</span> g
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-secondary w-100 mt-3" onclick="recalcularTotais()">2. Recalcular Totais Manuais</button>
+                        
+                        <button type="button" class="btn btn-success w-100 mt-3" onclick="finalizarDistribuicao()">3. Finalizar e Prosseguir para Prescrição</button>
+                    </div>
                 </div>
             </div>
 
@@ -105,7 +173,7 @@
             <div class="card mb-4">
                 <div class="card-header"><h4>4. Plano Detalhado</h4></div>
                 <div class="card-body" id="refeicoes-container">
-                    <p class="text-muted text-center">Defina as metas acima para começar a montar o plano.</p>
+                    <p class="text-muted text-center">Calcule a distribuição de macros acima para começar a montar o plano.</p>
                 </div>
             </div>
         </div>

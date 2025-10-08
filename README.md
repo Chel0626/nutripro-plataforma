@@ -1,4 +1,16 @@
-# NutriPro - instruções de desenvolvimento
+# NutriPro - Plataforma de Prescrição Nutricional
+
+## 📚 Documentação
+
+### 🎯 Análise de Tecnologias (Stack: Front-end, Back-end, Banco de Dados)
+1. **[RESPOSTA_RAPIDA.md](RESPOSTA_RAPIDA.md)** ⚡ - Resposta em 30 segundos
+2. **[TECNOLOGIAS_RESUMO.md](TECNOLOGIAS_RESUMO.md)** 📝 - Resumo completo (5 min de leitura)
+3. **[ANALISE_TECNOLOGIAS.md](ANALISE_TECNOLOGIAS.md)** 📖 - Análise detalhada (15 min)
+4. **[ARQUITETURA_DIAGRAMA.md](ARQUITETURA_DIAGRAMA.md)** 🏗️ - Diagramas visuais
+
+---
+
+## 🛠️ Instruções de Desenvolvimento
 
 Scripts úteis (PowerShell) — execute a partir da raiz do projeto `C:\dev\nutripro`.
 
